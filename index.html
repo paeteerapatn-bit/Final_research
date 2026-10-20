@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full bg-slate-950">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Executive Valuation Dashboard - ระบบวิเคราะห์ราคาประเมินและราคาตลาดที่ดิน</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS (xlsx) for Excel Processing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Proj4js & Proj4Leaflet for Indian 1975 to WGS84 Coordinate Transformation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4leaflet/1.0.2/proj4leaflet.min.js"></script>
+    <!-- shpjs Complete Bundle -->
+    <script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
+    <!-- Google Fonts: Prompt & JetBrains Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Prompt', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Prompt', sans-serif; background-color: #060911; }
+        .th-sortable { cursor: pointer; user-select: none; transition: all 0.2s; }
+        .th-sortable:hover { background-color: #1e293b !important; color: #38bdf8; }
+        
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { height: 8px; width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #0b0f19; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
+        
+        .glow-blue { box-shadow: 0 0 20px -5px rgba(56, 189, 248, 0.25); }
+        .glow-purple { box-shadow: 0 0 20px -5px rgba(168, 85, 247, 0.25); }
+        .glow-rose { box-shadow: 0 0 20px -5px rgba(244, 63, 94, 0.25); }
+        .glow-emerald { box-shadow: 0 0 20px -5px rgba(16, 185, 129, 0.25); }
+
+        /* Leaflet layer control dark theme override */
+        .leaflet-control-layers {
+            background-color: #0f172a !important;
+            color: #f1f5f9 !important;
+            border: 1px solid #334155 !important;
+            border-radius: 0.75rem !important;
+            padding: 8px 12px !important;
+        }
+        .leaflet-container { background: #060911 !important; }
+    </style>
+</head>
+<body class="h-full text-slate-200 antialiased flex flex-col min-h-screen">
+
+    <!-- Top Executive Header -->
+    <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800/80 sticky top-0 z-50 shadow-2xl">
+        <div class="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                
+                <!-- Brand Title -->
+                <div class="flex items-center space-x-4">
+                    <div class="p-3 bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-700 rounded-2xl shadow-lg shadow-cyan-500/20 ring-1 ring-white/20">
+                        <i class="fa-solid fa-chart-network text-2xl text-white"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
+                                ระบบวิเคราะห์และเปรียบเทียบราคาประเมินที่ดิน
+                            </h1>
+                            <span class="bg-cyan-500/10 text-cyan-400 text-[10px] font-semibold px-2.5 py-0.5 rounded-full border border-cyan-500/30 uppercase tracking-widest">
+                                Executive Edition
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-0.5">
+                            วิเคราะห์ส่วนต่างระหว่างราคาประเมินธนารักษ์ • ราคาตลาด • และผลลัพธ์จากแบบจำลองวิจัย
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Action Controls Panel -->
+                <div class="flex items-center gap-3 bg-slate-950/80 p-2 rounded-2xl border border-slate-800 shadow-inner">
+                    <!-- Excel Input -->
+                    <label class="cursor-pointer bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-medium px-4 py-2.5 rounded-xl transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-emerald-500/20 active:scale-95">
+                        <i class="fa-solid fa-file-excel text-sm"></i>
+                        <span>ดึงไฟล์ Excel</span>
+                        <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden" onchange="handleFileUpload(event)">
+                    </label>
+
+                    <!-- Shapefile Input -->
+                    <label class="cursor-pointer bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-medium px-4 py-2.5 rounded-xl transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-blue-500/20 active:scale-95">
+                        <i class="fa-solid fa-map-location-dot text-sm"></i>
+                        <span>ดึง Shapefile (.ZIP)</span>
+                        <input type="file" id="shpFileInput" accept=".zip" class="hidden" onchange="handleShpUpload(event)">
+                    </label>
+
+                    <div class="flex items-center gap-2 pl-2 border-l border-slate-800">
+                        <span class="text-xs text-slate-400 font-medium hidden sm:inline">
+                            <i class="fa-solid fa-layer-group text-slate-500 mr-1.5"></i>เลือก Sheet:
+                        </span>
+                        <select id="sheetSelector" onchange="changeSheet()" disabled class="bg-slate-900 text-xs text-slate-200 border border-slate-700 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-40 disabled:cursor-not-allowed min-w-[150px]">
+                            <option value="">-- รอการดึงไฟล์ --</option>
+                        </select>
+                    </div>
+
+                    <button onclick="syncData()" id="btnSync" disabled class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-medium px-4 py-2.5 rounded-xl transition-all duration-200 flex items-center gap-2 shadow-md disabled:opacity-40 disabled:cursor-not-allowed active:scale-95">
+                        <i class="fa-solid fa-rotate text-sm" id="syncIcon"></i>
+                        <span class="hidden md:inline">ซิงค์ข้อมูล</span>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Body -->
+    <main class="flex-grow max-w-[1920px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Top KPI Metric Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <!-- Total Units -->
+            <div class="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl shadow-xl relative overflow-hidden group hover:border-slate-700 transition-all">
+                <div class="absolute top-0 right-0 w-1.5 h-full bg-cyan-500"></div>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">หน่วยที่ดินทั้งหมด</p>
+                        <h3 class="text-2xl font-bold text-white mt-1 font-mono tracking-tight" id="kpiTotalRows">0</h3>
+                        <p class="text-xs text-slate-400 mt-1 flex items-center gap-1" id="kpiSheetName">
+                            <i class="fa-solid fa-table text-cyan-400"></i> ข้อมูลเริ่มต้น
+                        </p>
+                    </div>
+                    <div class="p-3 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-xl group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-map-location-dot text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treasury Price Avg -->
+            <div class="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl shadow-xl relative overflow-hidden group hover:border-slate-700 transition-all">
+                <div class="absolute top-0 right-0 w-1.5 h-full bg-blue-500"></div>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">ราคาประเมินธนารักษ์เฉลี่ย</p>
+                        <h3 class="text-2xl font-bold text-blue-400 mt-1 font-mono tracking-tight" id="kpiAvgTreasury">-</h3>
+                        <p class="text-[11px] text-slate-400 mt-1">บาท / ตารางวา</p>
+                    </div>
+                    <div class="p-3 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-xl group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-vault text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Model Price Avg -->
+            <div class="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl shadow-xl relative overflow-hidden group hover:border-slate-700 transition-all">
+                <div class="absolute top-0 right-0 w-1.5 h-full bg-purple-500"></div>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">ราคาเฉลี่ยจากแบบจำลอง</p>
+                        <h3 class="text-2xl font-bold text-purple-400 mt-1 font-mono tracking-tight" id="kpiAvgModel">-</h3>
+                        <p class="text-[11px] text-purple-400 mt-1"><i class="fa-solid fa-microchip mr-1"></i>จากงานวิจัย</p>
+                    </div>
+                    <div class="p-3 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-xl group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-brain-circuit text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Model > Treasury Card -->
+            <div onclick="setGroupFilter('higher')" class="cursor-pointer bg-slate-900/90 border border-slate-800 p-4 rounded-2xl shadow-xl relative overflow-hidden group hover:border-rose-500/50 transition-all">
+                <div class="absolute top-0 right-0 w-1.5 h-full bg-rose-500"></div>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-[11px] font-semibold text-rose-400 uppercase tracking-wider">แบบจำลอง สูงกว่า ธนารักษ์</p>
+                        <h3 class="text-2xl font-bold text-rose-400 mt-1 font-mono tracking-tight" id="kpiModelHigherCount">0 หน่วย</h3>
+                        <p class="text-[11px] text-slate-400 mt-1" id="kpiModelHigherPercent">0% ของหน่วยทั้งหมด</p>
+                    </div>
+                    <div class="p-3 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-xl group-hover:scale-110 transition-transform glow-rose">
+                        <i class="fa-solid fa-arrow-trend-up text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Model < Treasury Card -->
+            <div onclick="setGroupFilter('lower')" class="cursor-pointer bg-slate-900/90 border border-slate-800 p-4 rounded-2xl shadow-xl relative overflow-hidden group hover:border-emerald-500/50 transition-all">
+                <div class="absolute top-0 right-0 w-1.5 h-full bg-emerald-500"></div>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">แบบจำลอง ต่ำกว่า ธนารักษ์</p>
+                        <h3 class="text-2xl font-bold text-emerald-400 mt-1 font-mono tracking-tight" id="kpiModelLowerCount">0 หน่วย</h3>
+                        <p class="text-[11px] text-slate-400 mt-1" id="kpiModelLowerPercent">0% ของหน่วยทั้งหมด</p>
+                    </div>
+                    <div class="p-3 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl group-hover:scale-110 transition-transform glow-emerald">
+                        <i class="fa-solid fa-arrow-trend-down text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GIS Interactive Map Section -->
+        <div class="bg-slate-900/90 p-5 rounded-2xl border border-slate-800 shadow-xl space-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                    <h4 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                        <i class="fa-solid fa-earth-asia text-cyan-400"></i>
+                        แผนที่แสดงขอบเขตแนวถนนและหน่วยที่ดิน (GIS Web Map - Indian 1975 Auto Transformation)
+                    </h4>
+                    <p class="text-xs text-slate-400 mt-0.5">
+                        เชื่อมโยงข้อมูลระหว่าง Shapefile (<code class="text-cyan-400">STREET_COD</code>) และตารางข้อมูล (<code class="text-cyan-400">รหัสถนน</code>)
+                    </p>
+                </div>
+                <div class="flex items-center gap-3 text-xs">
+                    <span id="mapStatusBadge" class="bg-slate-800 text-slate-400 border border-slate-700 px-3 py-1 rounded-lg font-mono">
+                        สถานะ SHP: ยังไม่ได้นำเข้า
+                    </span>
+                </div>
+            </div>
+            <!-- Leaflet Container -->
+            <div id="gisMap" class="h-96 w-full rounded-xl border border-slate-800 relative z-10 overflow-hidden shadow-inner"></div>
+        </div>
+
+        <!-- Executive Analytics Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <!-- Multi-Valuation Bar Chart -->
+            <div class="lg:col-span-2 bg-slate-900/90 p-5 rounded-2xl border border-slate-800 shadow-xl">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                    <div>
+                        <h4 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-column text-cyan-400"></i>
+                            เปรียบเทียบราคาประเมินธนารักษ์ vs ราคาตลาด (ต่ำสุด-สูงสุด) vs ราคาจากแบบจำลอง
+                        </h4>
+                        <p class="text-xs text-slate-400 mt-0.5" id="chartSubtitle">แสดงข้อมูลราคาต่อหน่วยเปรียบเทียบตามหน่วยที่ดิน</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="resetSelectedUnit()" id="btnResetChart" class="hidden bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-[11px] font-medium px-3 py-1 rounded-lg transition-all flex items-center gap-1.5 active:scale-95 shadow-md">
+                            <i class="fa-solid fa-rotate-left"></i>
+                            <span>กลับหน้ารวม</span>
+                        </button>
+                        <span class="text-[11px] font-medium text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1 rounded-lg w-fit" id="chartBadgeText">
+                            Top 10 หน่วยสำรวจ
+                        </span>
+                    </div>
+                </div>
+                <div class="h-72">
+                    <canvas id="mainValuationChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Model vs Treasury Variance Doughnut Chart -->
+            <div class="bg-slate-900/90 p-5 rounded-2xl border border-slate-800 shadow-xl flex flex-col justify-between">
+                <div>
+                    <h4 class="text-sm font-semibold text-slate-100 flex items-center gap-2 mb-1">
+                        <i class="fa-solid fa-scale-balanced text-rose-400"></i>
+                        การเปรียบเทียบ: แบบจำลอง vs กรมธนารักษ์
+                    </h4>
+                    <p class="text-xs text-slate-400">สัดส่วนหน่วยที่ราคาแบบจำลองสูงกว่า vs ต่ำกว่า vs เท่ากับราคาประเมิน</p>
+                </div>
+                <div class="h-56 relative flex items-center justify-center my-2">
+                    <canvas id="varianceChart"></canvas>
+                </div>
+                <div class="text-center bg-slate-950/50 p-2.5 rounded-xl border border-slate-800">
+                    <p class="text-xs text-slate-400">ช่วยวิเคราะห์ผลลัพธ์จากการทดสอบแบบจำลอง</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 shadow-xl flex flex-col sm:flex-row gap-4 items-center justify-between">
+            <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                <div class="relative w-full sm:w-80">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
+                    <input type="text" id="searchInput" onkeyup="applyFilters()" placeholder="ค้นหาชื่อหน่วยที่ดิน, รหัสถนน, สำนักงานที่ดิน..." class="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-950 text-slate-200 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all">
+                </div>
+
+                <!-- Group Selector Dropdown -->
+                <div class="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 w-full sm:w-auto">
+                    <span class="text-xs text-slate-400 font-medium whitespace-nowrap">
+                        <i class="fa-solid fa-filter text-slate-500 mr-1.5"></i>เลือกกลุ่ม:
+                    </span>
+                    <select id="groupFilterSelect" onchange="onGroupDropdownChange()" class="bg-slate-900 text-xs text-slate-200 border border-slate-700 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all w-full sm:w-auto font-medium cursor-pointer">
+                        <option value="all">ทั้งหมด</option>
+                        <option value="hasMarket">ราคาประเมินจากข้อมูลตลาด</option>
+                        <option value="noMarket">ราคาประเมินที่ไม่มีข้อมูลตลาด</option>
+                        <option value="higher">สูงกว่า (Model > ธนารักษ์)</option>
+                        <option value="lower">ต่ำกว่า (Model &lt; ธนารักษ์)</option>
+                        <option value="equal">เท่ากับ (Model = ธนารักษ์)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-4 text-xs text-slate-400">
+                <span class="flex items-center gap-1.5 text-cyan-400 font-medium">
+                    <i class="fa-solid fa-hand-pointer text-[10px]"></i> คลิกที่แถวในตารางเพื่อดูกราฟ/ซูมแผนที่
+                </span>
+                <span class="flex items-center gap-1.5 text-rose-400 font-medium">
+                    <span class="w-2 h-2 rounded-full bg-rose-500 inline-block"></span> Model > ธนารักษ์
+                </span>
+                <span class="flex items-center gap-1.5 text-emerald-400 font-medium">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> Model &lt; ธนารักษ์
+                </span>
+            </div>
+        </div>
+
+        <!-- Main Executive Data Table -->
+        <div class="bg-slate-900/90 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden">
+            <div class="custom-scrollbar overflow-x-auto max-h-[600px]">
+                <table class="w-full text-xs text-left border-collapse whitespace-nowrap" id="dataTable">
+                    <thead class="bg-slate-950 text-slate-300 uppercase text-[11px] tracking-wider sticky top-0 z-20 shadow-lg">
+                        <tr id="tableHeaderRow">
+                            <!-- Dynamically generated headers -->
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800/60 font-normal" id="tableBody">
+                        <!-- Dynamically generated rows -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Table Footer -->
+            <div class="bg-slate-950/90 px-6 py-4 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center text-xs text-slate-400 gap-3">
+                <span id="recordCountInfo" class="font-medium text-slate-300">กำลังแสดงผล 0 รายการ</span>
+                <div class="flex items-center gap-5">
+                    <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span> Model สูงกว่า</span>
+                    <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> Model ต่ำกว่า</span>
+                    <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-slate-400 inline-block"></span> เท่ากัน</span>
+                    <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-slate-700 inline-block"></span> รอการกรอกข้อมูล (-)</span>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Definition of Indian 1975 Projections (Zone 47N & Zone 48N) for Proj4
+        proj4.defs("EPSG:24047", "+proj=utm +zone=47 +a=6377276.345 +b=6356075.41314024 +towgs84=210,814,289,0,0,0,0 +units=m +no_defs");
+        proj4.defs("EPSG:24048", "+proj=utm +zone=48 +a=6377276.345 +b=6356075.41314024 +towgs84=210,814,289,0,0,0,0 +units=m +no_defs");
+        proj4.defs("EPSG:4326", "+proj=longlat +datum=WGS84 +no_defs");
+
+        const defaultHeaders = [
+            "สำนักงานที่ดิน", 
+            "รหัสสำนักงานที่ดิน", 
+            "ST_RN/Block price_Rn/ckfix_RN", 
+            "ชื่อหน่วยที่ดิน", 
+            "รหัสถนน", 
+            "ราคากรมธนารักษ์", 
+            "ข้อมูลราคาตลาด (ต่ำสุด)", 
+            "ข้อมูลราคาตลาด (สูงสุด)", 
+            "คะแนนปัจจัย ตลาด(ธนารักษ์)", 
+            "ราคาประเมินจากข้อมูลตลาด", 
+            "ราคาหน่วยที่ไม่มีตลาด", 
+            "หน่วยเทียบจาก ต.3", 
+            "ราคาจากแบบจำลอง", 
+            "เปรียบเทียบ (Model vs ธนารักษ์)", 
+            "ราคาหน่วยไม่มีตลาดเทียบ Model", 
+            "หน่วยเทียบจาก Model"
+        ];
+
+        const mockSheet1 = [
+            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10004006", "ซอยคลินิกศูนย์แพทย์พัฒนา", "S0332", 80000, "", "", "", "", 80000, 58, 85000, "", "", "Model-A"],
+            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10005403", "ซอยพระราม9ซอย32", "S2834", 100000, "", "", "", "", 100000, 14, 105000, "", "", "Model-A"],
+            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10006827", "ซอยรามคำแหง24/4", "S1861", 100000, "", "", "", "", 100000, 16, 98000, "", "", "Model-A"],
+            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10009406", "ซอยรามคำแหง77", "S1842", 125000, "", "", "", "", 125000, 16, 128000, "", "", "Model-B"],
+            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10010213", "ซอยรามคำแหง52/2ซอย5", "S2455", 135000, 84562.10, 170562.16, "", 135000, "", 12, 142000, "", "", "Model-B"],
+            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10010401", "ซอยรามคำแหง89/2", "S2474", 125000, "", "", "", "", 125000, 17, 120000, "", "", "Model-A"],
+            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10012010", "ซอยรามคำแหง81/1", "S1847", 125000, "", "", "", "", 125000, 16, 129000, "", "", "Model-A"],
+            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10013246", "ซอยทางหัวหมากจากซอยกรุงเทพกรีฑาแยก1-2", "S2134", 30000, "", "", "", "", 30000, 66, 28000, "", "", "Model-C"],
+            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10013818", "ซอยประดิษฐ์มนูธรรม7", "S0081", 80000, "", "", "", "", 80000, 45, 88000, "", "", "Model-B"],
+            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10015802", "ซอยหัวหมาก(หินคลุกแยกจากซอยรามน้ำใจแยก4)", "S0680", 40000, "", "", "", "", 40000, 54, 43000, "", "", "Model-C"],
+            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10022810", "ซอยลาดพร้าว101ซอย31(ทับศักดิ์)", "S1331", 65000, "", "", "", "", 65000, 59, 62000, "", "", "Model-B"],
+            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10021404", "ซอยแยกจากซอยสุภาพงษ์2(ซอยรามคำแหง68แยก1-3)", "S1551", 70000, "", "", "", "", 70000, 48, 74000, "", "", "Model-B"],
+            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10020832", "ซอยลาดพร้าว109แยก7", "S3411", 86000, 67947.61, 100476.19, "", 86000, "", 39, 91000, "", "", "Model-B"]
+        ];
+
+        let workbookData = null;
+        let currentHeaders = [...defaultHeaders];
+        let currentRows = [...mockSheet1];
+        let filteredRows = [...mockSheet1];
+        let selectedGroupFilter = 'all';
+        let selectedUnitRow = null;
+        let sortDirections = {};
+        let mainChartInstance = null;
+        let varianceChartInstance = null;
+
+        // GIS Map Variables
+        let gisMap = null;
+        let geojsonLayer = null;
+
+        // Init App
+        window.addEventListener('DOMContentLoaded', () => {
+            initLeafletMap();
+            applyFilters();
+            updateKPIs();
+            initCharts();
+        });
+
+        // Initialize GIS Web Map
+        function initLeafletMap() {
+            const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '&copy; Esri World Imagery',
+                maxZoom: 19
+            });
+
+            const terrainLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '&copy; Esri World Topo Map',
+                maxZoom: 19
+            });
+
+            const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; CARTO',
+                subdomains: 'abcd',
+                maxZoom: 19
+            });
+
+            gisMap = L.map('gisMap', {
+                center: [13.7563, 100.5018],
+                zoom: 11,
+                layers: [satelliteLayer]
+            });
+
+            const baseMaps = {
+                "ดาวเทียม (Satellite)": satelliteLayer,
+                "ภูมิประเทศ (Terrain)": terrainLayer,
+                "แผนที่มืด (Dark Theme)": darkLayer
+            };
+
+            L.control.layers(baseMaps, null, { position: 'topright' }).addTo(gisMap);
+        }
+
+        // Helper: Convert GeoJSON Coordinates Recursive (Indian 1975 UTM Zone 47N -> WGS84)
+        function convertGeoJsonIndian1975ToWGS84(geojson) {
+            function transformCoords(coords) {
+                if (typeof coords[0] === 'number') {
+                    // Check if coordinates look like UTM (X > 100,000)
+                    if (coords[0] > 100000) {
+                        // Default transform from EPSG:24047 (Indian 1975 UTM Zone 47N) to EPSG:4326 (WGS84)
+                        const sourceCrs = coords[0] > 600000 ? "EPSG:24048" : "EPSG:24047";
+                        const wgs84Coords = proj4(sourceCrs, "EPSG:4326", [coords[0], coords[1]]);
+                        return [wgs84Coords[0], wgs84Coords[1]];
+                    }
+                    return coords;
+                } else if (Array.isArray(coords)) {
+                    return coords.map(transformCoords);
+                }
+                return coords;
+            }
+
+            const clonedGeoJson = JSON.parse(JSON.stringify(geojson));
+            if (clonedGeoJson.type === 'FeatureCollection') {
+                clonedGeoJson.features.forEach(f => {
+                    if (f.geometry && f.geometry.coordinates) {
+                        f.geometry.coordinates = transformCoords(f.geometry.coordinates);
+                    }
+                });
+            } else if (clonedGeoJson.geometry && clonedGeoJson.geometry.coordinates) {
+                clonedGeoJson.geometry.coordinates = transformCoords(clonedGeoJson.geometry.coordinates);
+            }
+            return clonedGeoJson;
+        }
+
+        // Updated Handle ZIP Shapefile Upload with Auto-Reprojection from Indian 1975 to WGS84
+        function handleShpUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const statusBadge = document.getElementById('mapStatusBadge');
+            statusBadge.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>กำลังอ่าน SHP & แปลงพิกัด Indian 1975...';
+            statusBadge.className = 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 px-3 py-1 rounded-lg font-mono';
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const buffer = e.target.result;
+                shp(buffer).then(function(geojson) {
+                    const rawData = Array.isArray(geojson) ? geojson[0] : geojson;
+                    
+                    // Auto Transform Indian 1975 -> WGS84
+                    const wgs84GeoJson = convertGeoJsonIndian1975ToWGS84(rawData);
+
+                    renderGeoJsonOnMap(wgs84GeoJson);
+
+                    statusBadge.innerHTML = `<i class="fa-solid fa-check mr-1 text-emerald-400"></i>แปลงพิกัด SHP สำเร็จ (${file.name})`;
+                    statusBadge.className = 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-3 py-1 rounded-lg font-mono';
+                }).catch(function(err) {
+                    console.error("Shapefile Parsing Error:", err);
+                    statusBadge.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1 text-rose-400"></i>อ่าน SHP ไม่สำเร็จ (โปรดแนบ .zip)';
+                    statusBadge.className = 'bg-rose-500/20 text-rose-300 border border-rose-500/40 px-3 py-1 rounded-lg font-mono';
+                });
+            };
+            reader.onerror = function() {
+                statusBadge.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1 text-rose-400"></i>การอ่านไฟล์ล้มเหลว';
+                statusBadge.className = 'bg-rose-500/20 text-rose-300 border border-rose-500/40 px-3 py-1 rounded-lg font-mono';
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Render GeoJSON Features onto Map
+        function renderGeoJsonOnMap(data) {
+            if (geojsonLayer) {
+                gisMap.removeLayer(geojsonLayer);
+            }
+
+            geojsonLayer = L.geoJSON(data, {
+                style: function(feature) {
+                    return {
+                        color: '#38bdf8',
+                        weight: 3,
+                        opacity: 0.8,
+                        fillColor: '#0284c7',
+                        fillOpacity: 0.35
+                    };
+                },
+                onEachFeature: function(feature, layer) {
+                    const props = feature.properties || {};
+                    const streetCod = props.STREET_COD || props.street_cod || props.Street_Cod || props.ST_RN || 'N/A';
+                    
+                    layer.bindTooltip(`<b>รหัสถนน (STREET_COD):</b> ${streetCod}`, { sticky: true });
+
+                    layer.on('click', () => {
+                        const targetRow = filteredRows.find(r => r[4] && r[4].toString().trim() === streetCod.toString().trim());
+                        if (targetRow) {
+                            selectedUnitRow = targetRow;
+                            renderTable(currentHeaders, filteredRows);
+                            updateCharts();
+                            highlightFeatureOnMap(streetCod);
+                        } else {
+                            alert(`พบรหัสถนน ${streetCod} บนแผนที่ แต่ไม่มีข้อมูลในตารางปัจจุบัน`);
+                        }
+                    });
+                }
+            }).addTo(gisMap);
+
+            if (geojsonLayer.getBounds().isValid()) {
+                gisMap.fitBounds(geojsonLayer.getBounds());
+            }
+        }
+
+        // Highlight Selected Feature on Map & Zoom
+        function highlightFeatureOnMap(streetCode) {
+            if (!geojsonLayer) return;
+
+            let matchedLayer = null;
+
+            geojsonLayer.eachLayer(layer => {
+                const props = layer.feature.properties || {};
+                const cod = props.STREET_COD || props.street_cod || props.Street_Cod || props.ST_RN || '';
+
+                if (cod.toString().trim() === streetCode.toString().trim()) {
+                    matchedLayer = layer;
+                    layer.setStyle({
+                        color: '#f43f5e',
+                        weight: 5,
+                        fillColor: '#fb7185',
+                        fillOpacity: 0.75
+                    });
+                } else {
+                    geojsonLayer.resetStyle(layer);
+                }
+            });
+
+            if (matchedLayer && matchedLayer.getBounds().isValid()) {
+                gisMap.fitBounds(matchedLayer.getBounds(), { maxZoom: 17, animate: true });
+            }
+        }
+
+        // Handle Excel Upload
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                workbookData = XLSX.read(data, { type: 'array' });
+
+                const sheetSelector = document.getElementById('sheetSelector');
+                sheetSelector.innerHTML = '';
+                workbookData.SheetNames.forEach(name => {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = `Sheet: ${name}`;
+                    sheetSelector.appendChild(opt);
+                });
+
+                sheetSelector.disabled = false;
+                document.getElementById('btnSync').disabled = false;
+                
+                loadSheetData(workbookData.SheetNames[0]);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function changeSheet() {
+            const selectedSheet = document.getElementById('sheetSelector').value;
+            if (workbookData && selectedSheet) {
+                loadSheetData(selectedSheet);
+            }
+        }
+
+        function loadSheetData(sheetName) {
+            const worksheet = workbookData.Sheets[sheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+            if (jsonData.length > 0) {
+                currentHeaders = [...defaultHeaders];
+                currentRows = jsonData.slice(2);
+
+                selectedUnitRow = null;
+                updateKPIs(sheetName);
+                applyFilters();
+            }
+        }
+
+        function syncData() {
+            const syncIcon = document.getElementById('syncIcon');
+            syncIcon.classList.add('fa-spin');
+            setTimeout(() => {
+                const selectedSheet = document.getElementById('sheetSelector').value;
+                if (workbookData && selectedSheet) {
+                    loadSheetData(selectedSheet);
+                }
+                syncIcon.classList.remove('fa-spin');
+            }, 400);
+        }
+
+        function onGroupDropdownChange() {
+            const selectVal = document.getElementById('groupFilterSelect').value;
+            selectedGroupFilter = selectVal;
+            applyFilters();
+        }
+
+        function setGroupFilter(group) {
+            selectedGroupFilter = group;
+            document.getElementById('groupFilterSelect').value = group;
+            applyFilters();
+        }
+
+        function selectUnitRow(rowIndex) {
+            selectedUnitRow = filteredRows[rowIndex];
+            renderTable(currentHeaders, filteredRows);
+            updateCharts();
+
+            const streetCode = selectedUnitRow[4];
+            if (streetCode) {
+                highlightFeatureOnMap(streetCode);
+            }
+
+            document.getElementById('mainValuationChart').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function resetSelectedUnit() {
+            selectedUnitRow = null;
+            if (geojsonLayer) {
+                geojsonLayer.eachLayer(layer => geojsonLayer.resetStyle(layer));
+                gisMap.fitBounds(geojsonLayer.getBounds());
+            }
+            renderTable(currentHeaders, filteredRows);
+            updateCharts();
+        }
+
+        function applyFilters() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+
+            filteredRows = currentRows.filter(row => {
+                const treasury = parseFloat(row[5]);
+                const model = parseFloat(row[12]);
+                const marketEval = row[9];
+                const hasMarketEvalVal = marketEval !== undefined && marketEval !== null && marketEval !== '';
+
+                let matchesGroup = true;
+                if (selectedGroupFilter !== 'all') {
+                    if (selectedGroupFilter === 'hasMarket') {
+                        matchesGroup = hasMarketEvalVal;
+                    } else if (selectedGroupFilter === 'noMarket') {
+                        matchesGroup = !hasMarketEvalVal;
+                    } else if (isNaN(treasury) || isNaN(model)) {
+                        matchesGroup = false;
+                    } else if (selectedGroupFilter === 'higher') {
+                        matchesGroup = model > treasury;
+                    } else if (selectedGroupFilter === 'lower') {
+                        matchesGroup = model < treasury;
+                    } else if (selectedGroupFilter === 'equal') {
+                        matchesGroup = model === treasury;
+                    }
+                }
+
+                let matchesSearch = true;
+                if (query !== '') {
+                    matchesSearch = row.some(cell => cell !== null && cell !== undefined && cell.toString().toLowerCase().includes(query));
+                }
+
+                return matchesGroup && matchesSearch;
+            });
+
+            if (selectedUnitRow && !filteredRows.includes(selectedUnitRow)) {
+                selectedUnitRow = null;
+            }
+
+            renderTable(currentHeaders, filteredRows);
+            updateCharts();
+        }
+
+        function renderTable(headers, rows) {
+            const headerRow = document.getElementById('tableHeaderRow');
+            const tableBody = document.getElementById('tableBody');
+
+            headerRow.innerHTML = headers.map((h, colIndex) => `
+                <th onclick="sortTable(${colIndex})" class="th-sortable px-4 py-3.5 border-b border-slate-800 font-medium text-slate-300">
+                    <div class="flex items-center justify-between gap-2">
+                        <span>${h}</span>
+                        <i class="fa-solid fa-sort text-slate-600 text-[10px]"></i>
+                    </div>
+                </th>
+            `).join('');
+
+            if (rows.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="${headers.length}" class="text-center py-10 text-slate-500">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td></tr>`;
+            } else {
+                tableBody.innerHTML = rows.map((row, idx) => {
+                    const treasuryVal = parseFloat(row[5]);
+                    const modelVal = parseFloat(row[12]);
+                    const isSelected = selectedUnitRow === row;
+                    
+                    let diffBadge = '<span class="text-slate-600 font-mono">-</span>';
+                    if (!isNaN(treasuryVal) && !isNaN(modelVal) && treasuryVal > 0) {
+                        const diffPercent = ((modelVal - treasuryVal) / treasuryVal) * 100;
+                        if (diffPercent > 0) {
+                            diffBadge = `<span class="inline-flex items-center gap-1 bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[10px] px-2 py-0.5 rounded-full font-mono font-medium">
+                                <i class="fa-solid fa-arrow-up text-[9px]"></i> +${diffPercent.toFixed(1)}% (สูงกว่า)
+                            </span>`;
+                        } else if (diffPercent < 0) {
+                            diffBadge = `<span class="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] px-2 py-0.5 rounded-full font-mono font-medium">
+                                <i class="fa-solid fa-arrow-down text-[9px]"></i> ${diffPercent.toFixed(1)}% (ต่ำกว่า)
+                            </span>`;
+                        } else {
+                            diffBadge = `<span class="inline-flex items-center gap-1 bg-slate-500/10 text-slate-300 border border-slate-500/20 text-[10px] px-2 py-0.5 rounded-full font-mono">
+                                เท่ากัน
+                            </span>`;
+                        }
+                    }
+
+                    const activeRowClass = isSelected 
+                        ? 'bg-cyan-950/60 ring-1 ring-cyan-500/50 text-cyan-200 font-medium' 
+                        : 'hover:bg-slate-800/50 transition-colors cursor-pointer';
+
+                    return `
+                        <tr onclick="selectUnitRow(${idx})" class="${activeRowClass}">
+                            ${headers.map((_, colIdx) => {
+                                if (colIdx === 13) {
+                                    return `<td class="px-4 py-3 border-b border-slate-800/60">${diffBadge}</td>`;
+                                }
+
+                                const rawIdx = colIdx > 13 ? colIdx - 1 : colIdx;
+                                const val = row[rawIdx];
+                                const isNum = typeof val === 'number';
+                                const isEmpty = val === undefined || val === null || val === '';
+                                
+                                let displayVal = '<span class="text-slate-600 font-mono">-</span>';
+                                if (!isEmpty) {
+                                    if (rawIdx === 1 || rawIdx === 2) {
+                                        displayVal = val.toString();
+                                    } else if (isNum) {
+                                        displayVal = val.toLocaleString('th-TH', { maximumFractionDigits: 2 });
+                                    } else {
+                                        displayVal = val;
+                                    }
+                                }
+                                
+                                let numStyle = (isNum || rawIdx === 1 || rawIdx === 2) ? 'text-right font-mono font-medium ' : '';
+                                if (colIdx === 5) numStyle += 'text-cyan-400 ';
+                                if (colIdx === 6 || colIdx === 7) numStyle += 'text-emerald-400 ';
+                                if (colIdx === 9) numStyle += 'text-amber-400 ';
+                                if (colIdx === 12) numStyle += 'text-purple-400 ';
+
+                                return `<td class="px-4 py-3 border-b border-slate-800/60 ${isSelected ? 'text-cyan-100' : 'text-slate-300'} ${numStyle}">${displayVal}</td>`;
+                            }).join('')}
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            document.getElementById('recordCountInfo').textContent = `กำลังแสดงผลทั้งหมด ${rows.length.toLocaleString()} รายการ`;
+        }
+
+        function sortTable(colIndex) {
+            const currentDir = sortDirections[colIndex] === 'asc' ? 'desc' : 'asc';
+            sortDirections[colIndex] = currentDir;
+
+            filteredRows.sort((a, b) => {
+                let valA = a[colIndex] !== undefined && a[colIndex] !== null ? a[colIndex] : '';
+                let valB = b[colIndex] !== undefined && b[colIndex] !== null ? b[colIndex] : '';
+
+                if (valA === '' && valB !== '') return 1;
+                if (valA !== '' && valB === '') return -1;
+
+                if (typeof valA === 'number' && typeof valB === 'number') {
+                    return currentDir === 'asc' ? valA - valB : valB - valA;
+                } else {
+                    return currentDir === 'asc' 
+                        ? valA.toString().localeCompare(valB.toString(), 'th') 
+                        : valB.toString().localeCompare(valA.toString(), 'th');
+                }
+            });
+
+            renderTable(currentHeaders, filteredRows);
+            updateCharts();
+        }
+
+        function updateKPIs(sheetName = 'Sheet1') {
+            document.getElementById('kpiTotalRows').textContent = currentRows.length.toLocaleString();
+            document.getElementById('kpiSheetName').innerHTML = `<i class="fa-solid fa-table text-cyan-400"></i> ${sheetName}`;
+
+            let sumTreasury = 0, countTreasury = 0;
+            let sumModel = 0, countModel = 0;
+            let higherCount = 0, lowerCount = 0;
+
+            currentRows.forEach(row => {
+                const treasury = parseFloat(row[5]);
+                const model = parseFloat(row[12]);
+
+                if (!isNaN(treasury)) { sumTreasury += treasury; countTreasury++; }
+                if (!isNaN(model)) { sumModel += model; countModel++; }
+
+                if (!isNaN(treasury) && !isNaN(model)) {
+                    if (model > treasury) higherCount++;
+                    else if (model < treasury) lowerCount++;
+                }
+            });
+
+            const avgTreasury = countTreasury > 0 ? (sumTreasury / countTreasury) : 0;
+            const avgModel = countModel > 0 ? (sumModel / countModel) : 0;
+
+            document.getElementById('kpiAvgTreasury').textContent = avgTreasury ? avgTreasury.toLocaleString('th-TH', { maximumFractionDigits: 0 }) : '-';
+            document.getElementById('kpiAvgModel').textContent = avgModel ? avgModel.toLocaleString('th-TH', { maximumFractionDigits: 0 }) : '-';
+            
+            document.getElementById('kpiModelHigherCount').textContent = `${higherCount.toLocaleString()} หน่วย`;
+            document.getElementById('kpiModelHigherPercent').textContent = `${((higherCount / (currentRows.length || 1)) * 100).toFixed(1)}% ของหน่วยทั้งหมด`;
+
+            document.getElementById('kpiModelLowerCount').textContent = `${lowerCount.toLocaleString()} หน่วย`;
+            document.getElementById('kpiModelLowerPercent').textContent = `${((lowerCount / (currentRows.length || 1)) * 100).toFixed(1)}% ของหน่วยทั้งหมด`;
+        }
+
+        function initCharts() {
+            const ctx1 = document.getElementById('mainValuationChart').getContext('2d');
+            const ctx2 = document.getElementById('varianceChart').getContext('2d');
+
+            mainChartInstance = new Chart(ctx1, {
+                type: 'bar',
+                data: getMainChartData(),
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { color: '#94a3b8', font: { family: 'Prompt', size: 11 } } }
+                    },
+                    scales: {
+                        y: { ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: '#1e293b' } },
+                        x: { ticks: { color: '#94a3b8', font: { family: 'Prompt', size: 10 } }, grid: { display: false } }
+                    }
+                }
+            });
+
+            varianceChartInstance = new Chart(ctx2, {
+                type: 'doughnut',
+                data: getVarianceChartData(),
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Prompt', size: 11 } } }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        function updateCharts() {
+            if (mainChartInstance && varianceChartInstance) {
+                const btnReset = document.getElementById('btnResetChart');
+                const badgeText = document.getElementById('chartBadgeText');
+                const subtitleText = document.getElementById('chartSubtitle');
+
+                if (selectedUnitRow) {
+                    btnReset.classList.remove('hidden');
+                    const unitName = selectedUnitRow[3] || 'หน่วยที่เลือก';
+                    badgeText.textContent = `หน่วยเฉพาะ: ${unitName.length > 20 ? unitName.substring(0,20) + '...' : unitName}`;
+                    badgeText.className = "text-[11px] font-medium text-purple-300 bg-purple-500/20 border border-purple-500/40 px-3 py-1 rounded-lg w-fit";
+                    subtitleText.textContent = `เจาะลึกราคาเปรียบเทียบเฉพาะหน่วยที่ดิน: ${unitName}`;
+                } else {
+                    btnReset.classList.add('hidden');
+                    badgeText.textContent = "Top 10 หน่วยสำรวจ";
+                    badgeText.className = "text-[11px] font-medium text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1 rounded-lg w-fit";
+                    subtitleText.textContent = "แสดงข้อมูลราคาต่อหน่วยเปรียบเทียบตามหน่วยที่ดิน";
+                }
+
+                mainChartInstance.data = getMainChartData();
+                mainChartInstance.update();
+                varianceChartInstance.data = getVarianceChartData();
+                varianceChartInstance.update();
+            }
+        }
+
+        function getMainChartData() {
+            if (selectedUnitRow) {
+                const label = selectedUnitRow[3] ? (selectedUnitRow[3].length > 25 ? selectedUnitRow[3].substring(0, 25) + '...' : selectedUnitRow[3]) : 'Selected Unit';
+                return {
+                    labels: [label],
+                    datasets: [
+                        { label: 'ราคาธนารักษ์', data: [parseFloat(selectedUnitRow[5]) || 0], backgroundColor: '#3b82f6', borderRadius: 6 },
+                        { label: 'ราคาตลาด (ต่ำสุด)', data: [parseFloat(selectedUnitRow[6]) || 0], backgroundColor: '#10b981', borderRadius: 6 },
+                        { label: 'ราคาตลาด (สูงสุด)', data: [parseFloat(selectedUnitRow[7]) || 0], backgroundColor: '#f59e0b', borderRadius: 6 },
+                        { label: 'ราคาแบบจำลอง (Model)', data: [parseFloat(selectedUnitRow[12]) || 0], backgroundColor: '#a855f7', borderRadius: 6 }
+                    ]
+                };
+            }
+
+            const sampleRows = filteredRows.slice(0, 10);
+            const labels = sampleRows.map(r => r[3] ? (r[3].length > 14 ? r[3].substring(0, 14) + '...' : r[3]) : 'N/A');
+            
+            const treasuryPrices = sampleRows.map(r => parseFloat(r[5]) || 0);
+            const marketMinPrices = sampleRows.map(r => parseFloat(r[6]) || 0);
+            const marketMaxPrices = sampleRows.map(r => parseFloat(r[7]) || 0);
+            const modelPrices = sampleRows.map(r => parseFloat(r[12]) || 0);
+
+            return {
+                labels: labels,
+                datasets: [
+                    { label: 'ราคาธนารักษ์', data: treasuryPrices, backgroundColor: '#3b82f6', borderRadius: 4 },
+                    { label: 'ราคาตลาด (ต่ำสุด)', data: marketMinPrices, backgroundColor: '#10b981', borderRadius: 4 },
+                    { label: 'ราคาตลาด (สูงสุด)', data: marketMaxPrices, backgroundColor: '#f59e0b', borderRadius: 4 },
+                    { label: 'ราคาแบบจำลอง (Model)', data: modelPrices, backgroundColor: '#a855f7', borderRadius: 4 }
+                ]
+            };
+        }
+
+        function getVarianceChartData() {
+            let higher = 0;
+            let lower = 0;
+            let equal = 0;
+            let noData = 0;
+
+            currentRows.forEach(row => {
+                const treasury = parseFloat(row[5]);
+                const model = parseFloat(row[12]);
+
+                if (!isNaN(treasury) && !isNaN(model)) {
+                    if (model > treasury) higher++;
+                    else if (model < treasury) lower++;
+                    else equal++;
+                } else {
+                    noData++;
+                }
+            });
+
+            return {
+                labels: ['แบบจำลอง สูงกว่า', 'แบบจำลอง ต่ำกว่า', 'เท่ากัน', 'รอข้อมูลเทียบ'],
+                datasets: [{
+                    data: [higher, lower, equal, noData],
+                    backgroundColor: ['#f43f5e', '#10b981', '#94a3b8', '#334155'],
+                    borderWidth: 0
+                }]
+            };
+        }
+    </script>
+</body>
+</html>
