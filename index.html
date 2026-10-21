@@ -392,6 +392,7 @@
         proj4.defs("EPSG:24048", "+proj=utm +zone=48 +a=6377276.345 +b=6356075.41314024 +towgs84=210,814,289,0,0,0,0 +units=m +no_defs");
         proj4.defs("EPSG:4326", "+proj=longlat +datum=WGS84 +no_defs");
 
+        // เพิ่ม "Google Maps" ต่อท้ายคอลัมน์มาตรฐาน
         const defaultHeaders = [
             "สำนักงานที่ดิน", 
             "รหัสสำนักงานที่ดิน", 
@@ -408,7 +409,8 @@
             "ราคาจากแบบจำลอง", 
             "เปรียบเทียบ (Model vs ธนารักษ์)", 
             "ราคาหน่วยไม่มีตลาดเทียบ Model", 
-            "หน่วยเทียบจาก Model"
+            "หน่วยเทียบจาก Model",
+            "Google Maps"
         ];
 
         const mockSheet1 = [
@@ -594,9 +596,15 @@
                     const props = feature.properties || {};
                     const streetCod = props.STREET_COD || props.street_cod || props.Street_Cod || props.ST_RN || 'N/A';
                     
-                    // ค้นหาข้อมูลใน currentRows หรือ filteredRows เพื่อดึงราคาธนารักษ์และราคา Model
                     const matchedRow = currentRows.find(r => r[4] && r[4].toString().trim() === streetCod.toString().trim());
                     
+                    // คำนวณพิกัดจุดศูนย์กลางเพื่อสร้างลิงก์ Google Maps
+                    const bounds = layer.getBounds ? layer.getBounds() : null;
+                    const center = bounds ? bounds.getCenter() : null;
+                    const mapUrl = center 
+                        ? `https://www.google.com/maps?q=${center.lat},${center.lng}`
+                        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(matchedRow ? matchedRow[3] : streetCod)}`;
+
                     let popupContent = `<div style="font-family: 'Prompt', sans-serif; font-size: 12px; line-height: 1.6; min-width: 200px;">
                         <b style="color: #38bdf8; font-size: 13px;"><i class="fa-solid fa-road"></i> รหัสถนน: ${streetCod}</b><hr style="border-color: #334155; margin: 6px 0;">`;
                     
@@ -626,7 +634,15 @@
                     } else {
                         popupContent += `<div style="color: #94a3b8; font-style: italic;">ไม่พบข้อมูลราคาจับคู่ในตาราง</div>`;
                     }
-                    popupContent += `</div>`;
+
+                    // ปุ่มเปิด Google Maps ใน Pop-up
+                    popupContent += `
+                        <div style="margin-top: 10px;">
+                            <a href="${mapUrl}" target="_blank" style="display: inline-flex; items-center: center; gap: 6px; background-color: #0284c7; color: white; padding: 5px 10px; border-radius: 6px; text-decoration: none; font-size: 11px; font-weight: 500;">
+                                <i class="fa-solid fa-map-location-dot"></i> เปิดใน Google Maps
+                            </a>
+                        </div>
+                    </div>`;
 
                     layer.bindPopup(popupContent);
 
@@ -855,8 +871,26 @@
                     return `
                         <tr onclick="selectUnitRow(${idx})" class="${activeRowClass}">
                             ${headers.map((_, colIdx) => {
+                                // คอลัมน์พิเศษที่ 13: เปรียบเทียบ Model vs ธนารักษ์
                                 if (colIdx === 13) {
                                     return `<td class="px-4 py-3 border-b border-slate-800/60">${diffBadge}</td>`;
+                                }
+
+                                // คอลัมน์พิเศษที่ 16: ปุ่ม Google Maps
+                                if (colIdx === 16) {
+                                    const landName = row[3] || '';
+                                    const landOffice = row[0] || '';
+                                    const queryText = encodeURIComponent(`${landName} ${landOffice}`);
+                                    const mapSearchUrl = `https://www.google.com/maps/search/?api=1&query=${queryText}`;
+
+                                    return `
+                                        <td class="px-4 py-3 border-b border-slate-800/60 text-center" onclick="event.stopPropagation();">
+                                            <a href="${mapSearchUrl}" target="_blank" title="เปิด Google Maps" class="inline-flex items-center gap-1.5 bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 px-2.5 py-1 rounded-lg text-[11px] transition-all duration-150 active:scale-95 shadow-sm">
+                                                <i class="fa-solid fa-location-dot"></i>
+                                                <span>นำทาง</span>
+                                            </a>
+                                        </td>
+                                    `;
                                 }
 
                                 const rawIdx = colIdx > 13 ? colIdx - 1 : colIdx;
