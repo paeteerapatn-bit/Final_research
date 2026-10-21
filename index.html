@@ -59,7 +59,39 @@
             border-radius: 0.75rem !important;
             padding: 8px 12px !important;
         }
-        .leaflet-container { background: #060911 !important; }
+        .leaflet-container { background: #060911 !important; font-family: 'Prompt', sans-serif !important; }
+        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+            background-color: #0f172a !important;
+            color: #f1f5f9 !important;
+            border: 1px solid #334155 !important;
+            border-radius: 0.75rem !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+        }
+
+        /* Fullscreen Mode Styling */
+        .fullscreen-mode {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 9999 !important;
+            background-color: #060911 !important;
+            padding: 24px !important;
+            border-radius: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
+        }
+        .fullscreen-mode #gisMap {
+            height: calc(100vh - 120px) !important;
+            flex-grow: 1 !important;
+        }
+        .fullscreen-mode .table-container-box {
+            max-height: calc(100vh - 180px) !important;
+            flex-grow: 1 !important;
+        }
     </style>
 </head>
 <body class="h-full text-slate-200 antialiased flex flex-col min-h-screen">
@@ -208,7 +240,7 @@
         </div>
 
         <!-- GIS Interactive Map Section -->
-        <div class="bg-slate-900/90 p-5 rounded-2xl border border-slate-800 shadow-xl space-y-3">
+        <div id="mapSectionContainer" class="bg-slate-900/90 p-5 rounded-2xl border border-slate-800 shadow-xl space-y-3 transition-all">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                     <h4 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
@@ -223,6 +255,10 @@
                     <span id="mapStatusBadge" class="bg-slate-800 text-slate-400 border border-slate-700 px-3 py-1 rounded-lg font-mono">
                         สถานะ SHP: ยังไม่ได้นำเข้า
                     </span>
+                    <button onclick="toggleMapFullscreen()" id="btnMapFullscreen" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 active:scale-95 shadow-md">
+                        <i class="fa-solid fa-expand" id="mapFullscreenIcon"></i>
+                        <span class="hidden sm:inline" id="mapFullscreenText">ขยายเต็มจอ</span>
+                    </button>
                 </div>
             </div>
             <!-- Leaflet Container -->
@@ -312,8 +348,17 @@
         </div>
 
         <!-- Main Executive Data Table -->
-        <div class="bg-slate-900/90 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden">
-            <div class="custom-scrollbar overflow-x-auto max-h-[600px]">
+        <div id="tableSectionContainer" class="bg-slate-900/90 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden transition-all">
+            <div class="bg-slate-950/80 px-5 py-3 border-b border-slate-800 flex items-center justify-between">
+                <h4 class="text-xs font-semibold text-slate-300 flex items-center gap-2">
+                    <i class="fa-solid fa-table text-cyan-400"></i> ตารางแสดงข้อมูลรายละเอียดราคาประเมินที่ดิน
+                </h4>
+                <button onclick="toggleTableFullscreen()" id="btnTableFullscreen" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 active:scale-95 shadow-md">
+                    <i class="fa-solid fa-expand" id="tableFullscreenIcon"></i>
+                    <span class="hidden sm:inline" id="tableFullscreenText">ขยายตารางเต็มจอ</span>
+                </button>
+            </div>
+            <div class="custom-scrollbar overflow-x-auto max-h-[600px] table-container-box">
                 <table class="w-full text-xs text-left border-collapse whitespace-nowrap" id="dataTable">
                     <thead class="bg-slate-950 text-slate-300 uppercase text-[11px] tracking-wider sticky top-0 z-20 shadow-lg">
                         <tr id="tableHeaderRow">
@@ -437,13 +482,48 @@
             L.control.layers(baseMaps, null, { position: 'topright' }).addTo(gisMap);
         }
 
+        // Toggle Fullscreen for GIS Map
+        function toggleMapFullscreen() {
+            const container = document.getElementById('mapSectionContainer');
+            const icon = document.getElementById('mapFullscreenIcon');
+            const text = document.getElementById('mapFullscreenText');
+
+            container.classList.toggle('fullscreen-mode');
+            const isFull = container.classList.contains('fullscreen-mode');
+
+            if (isFull) {
+                icon.className = "fa-solid fa-compress";
+                text.textContent = "ย่อหน้าจอ";
+            } else {
+                icon.className = "fa-solid fa-expand";
+                text.textContent = "ขยายเต็มจอ";
+            }
+            setTimeout(() => { gisMap.invalidateSize(); }, 200);
+        }
+
+        // Toggle Fullscreen for Table
+        function toggleTableFullscreen() {
+            const container = document.getElementById('tableSectionContainer');
+            const icon = document.getElementById('tableFullscreenIcon');
+            const text = document.getElementById('tableFullscreenText');
+
+            container.classList.toggle('fullscreen-mode');
+            const isFull = container.classList.contains('fullscreen-mode');
+
+            if (isFull) {
+                icon.className = "fa-solid fa-compress";
+                text.textContent = "ย่อตาราง";
+            } else {
+                icon.className = "fa-solid fa-expand";
+                text.textContent = "ขยายตารางเต็มจอ";
+            }
+        }
+
         // Helper: Convert GeoJSON Coordinates Recursive (Indian 1975 UTM Zone 47N -> WGS84)
         function convertGeoJsonIndian1975ToWGS84(geojson) {
             function transformCoords(coords) {
                 if (typeof coords[0] === 'number') {
-                    // Check if coordinates look like UTM (X > 100,000)
                     if (coords[0] > 100000) {
-                        // Default transform from EPSG:24047 (Indian 1975 UTM Zone 47N) to EPSG:4326 (WGS84)
                         const sourceCrs = coords[0] > 600000 ? "EPSG:24048" : "EPSG:24047";
                         const wgs84Coords = proj4(sourceCrs, "EPSG:4326", [coords[0], coords[1]]);
                         return [wgs84Coords[0], wgs84Coords[1]];
@@ -468,7 +548,6 @@
             return clonedGeoJson;
         }
 
-        // Updated Handle ZIP Shapefile Upload with Auto-Reprojection from Indian 1975 to WGS84
         function handleShpUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -482,28 +561,20 @@
                 const buffer = e.target.result;
                 shp(buffer).then(function(geojson) {
                     const rawData = Array.isArray(geojson) ? geojson[0] : geojson;
-                    
-                    // Auto Transform Indian 1975 -> WGS84
                     const wgs84GeoJson = convertGeoJsonIndian1975ToWGS84(rawData);
-
                     renderGeoJsonOnMap(wgs84GeoJson);
 
                     statusBadge.innerHTML = `<i class="fa-solid fa-check mr-1 text-emerald-400"></i>แปลงพิกัด SHP สำเร็จ (${file.name})`;
                     statusBadge.className = 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-3 py-1 rounded-lg font-mono';
                 }).catch(function(err) {
                     console.error("Shapefile Parsing Error:", err);
-                    statusBadge.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1 text-rose-400"></i>อ่าน SHP ไม่สำเร็จ (โปรดแนบ .zip)';
+                    statusBadge.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1 text-rose-400"></i>อ่าน SHP ไม่สำเร็จ';
                     statusBadge.className = 'bg-rose-500/20 text-rose-300 border border-rose-500/40 px-3 py-1 rounded-lg font-mono';
                 });
-            };
-            reader.onerror = function() {
-                statusBadge.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1 text-rose-400"></i>การอ่านไฟล์ล้มเหลว';
-                statusBadge.className = 'bg-rose-500/20 text-rose-300 border border-rose-500/40 px-3 py-1 rounded-lg font-mono';
             };
             reader.readAsArrayBuffer(file);
         }
 
-        // Render GeoJSON Features onto Map
         function renderGeoJsonOnMap(data) {
             if (geojsonLayer) {
                 gisMap.removeLayer(geojsonLayer);
@@ -523,17 +594,48 @@
                     const props = feature.properties || {};
                     const streetCod = props.STREET_COD || props.street_cod || props.Street_Cod || props.ST_RN || 'N/A';
                     
-                    layer.bindTooltip(`<b>รหัสถนน (STREET_COD):</b> ${streetCod}`, { sticky: true });
+                    // ค้นหาข้อมูลใน currentRows หรือ filteredRows เพื่อดึงราคาธนารักษ์และราคา Model
+                    const matchedRow = currentRows.find(r => r[4] && r[4].toString().trim() === streetCod.toString().trim());
+                    
+                    let popupContent = `<div style="font-family: 'Prompt', sans-serif; font-size: 12px; line-height: 1.6; min-width: 200px;">
+                        <b style="color: #38bdf8; font-size: 13px;"><i class="fa-solid fa-road"></i> รหัสถนน: ${streetCod}</b><hr style="border-color: #334155; margin: 6px 0;">`;
+                    
+                    if (matchedRow) {
+                        const treasuryVal = parseFloat(matchedRow[5]);
+                        const modelVal = parseFloat(matchedRow[12]);
+                        const unitName = matchedRow[3] || 'ไม่ระบุชื่อหน่วย';
+                        
+                        let diffHtml = '<span style="color: #94a3b8;">-</span>';
+                        if (!isNaN(treasuryVal) && !isNaN(modelVal) && treasuryVal > 0) {
+                            const diffPercent = ((modelVal - treasuryVal) / treasuryVal) * 100;
+                            if (diffPercent > 0) {
+                                diffHtml = `<span style="color: #f43f5e; font-weight: 600;">+${diffPercent.toFixed(1)}% (สูงกว่าธนารักษ์)</span>`;
+                            } else if (diffPercent < 0) {
+                                diffHtml = `<span style="color: #10b981; font-weight: 600;">${diffPercent.toFixed(1)}% (ต่ำกว่าธนารักษ์)</span>`;
+                            } else {
+                                diffHtml = `<span style="color: #cbd5e1; font-weight: 600;">เท่ากัน</span>`;
+                            }
+                        }
+
+                        popupContent += `
+                            <div><b>ชื่อหน่วย:</b> ${unitName}</div>
+                            <div><b>ราคาธนารักษ์:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #38bdf8;">${!isNaN(treasuryVal) ? treasuryVal.toLocaleString('th-TH') : '-'}</span> บ./ตร.ว.</div>
+                            <div><b>ราคา Model:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #a855f7;">${!isNaN(modelVal) ? modelVal.toLocaleString('th-TH') : '-'}</span> บ./ตร.ว.</div>
+                            <div><b>อัตราเปรียบเทียบ:</b> ${diffHtml}</div>
+                        `;
+                    } else {
+                        popupContent += `<div style="color: #94a3b8; font-style: italic;">ไม่พบข้อมูลราคาจับคู่ในตาราง</div>`;
+                    }
+                    popupContent += `</div>`;
+
+                    layer.bindPopup(popupContent);
 
                     layer.on('click', () => {
-                        const targetRow = filteredRows.find(r => r[4] && r[4].toString().trim() === streetCod.toString().trim());
-                        if (targetRow) {
-                            selectedUnitRow = targetRow;
+                        if (matchedRow) {
+                            selectedUnitRow = matchedRow;
                             renderTable(currentHeaders, filteredRows);
                             updateCharts();
                             highlightFeatureOnMap(streetCod);
-                        } else {
-                            alert(`พบรหัสถนน ${streetCod} บนแผนที่ แต่ไม่มีข้อมูลในตารางปัจจุบัน`);
                         }
                     });
                 }
@@ -544,7 +646,6 @@
             }
         }
 
-        // Highlight Selected Feature on Map & Zoom
         function highlightFeatureOnMap(streetCode) {
             if (!geojsonLayer) return;
 
@@ -572,7 +673,6 @@
             }
         }
 
-        // Handle Excel Upload
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -942,7 +1042,6 @@
             };
         }
 
-        // ปรับปรุงฟังก์ชันนี้ให้ใช้ filteredRows แทน currentRows เพื่อให้สอดคล้องกับกลุ่มข้อมูลที่เลือกในแถบเลือกกลุ่ม
         function getVarianceChartData() {
             let higher = 0;
             let lower = 0;
