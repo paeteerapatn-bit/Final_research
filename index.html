@@ -942,13 +942,14 @@
             };
         }
 
+        // ปรับปรุงฟังก์ชันนี้ให้ใช้ filteredRows แทน currentRows เพื่อให้สอดคล้องกับกลุ่มข้อมูลที่เลือกในแถบเลือกกลุ่ม
         function getVarianceChartData() {
             let higher = 0;
             let lower = 0;
             let equal = 0;
             let noData = 0;
 
-            currentRows.forEach(row => {
+            filteredRows.forEach(row => {
                 const treasury = parseFloat(row[5]);
                 const model = parseFloat(row[12]);
 
