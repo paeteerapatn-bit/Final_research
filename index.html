@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Executive Valuation Dashboard - ระบบวิเคราะห์ราคาประเมินและราคาตลาดที่ดิน</title>
+    <title>Mass Appraisal Research Dashboard - ระบบวิเคราะห์และพยากรณ์ราคาประเมินที่ดิน</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -50,6 +50,7 @@
         .glow-purple { box-shadow: 0 0 20px -5px rgba(168, 85, 247, 0.25); }
         .glow-rose { box-shadow: 0 0 20px -5px rgba(244, 63, 94, 0.25); }
         .glow-emerald { box-shadow: 0 0 20px -5px rgba(16, 185, 129, 0.25); }
+        .glow-amber { box-shadow: 0 0 20px -5px rgba(245, 158, 11, 0.25); }
 
         /* Leaflet layer control dark theme override */
         .leaflet-control-layers {
@@ -60,36 +61,51 @@
             padding: 8px 12px !important;
         }
         .leaflet-container { background: #060911 !important; font-family: 'Prompt', sans-serif !important; }
+        
+        /* Base Popup Styling */
         .leaflet-popup-content-wrapper, .leaflet-popup-tip {
             background-color: #0f172a !important;
             color: #f1f5f9 !important;
-            border: 1px solid #334155 !important;
             border-radius: 0.75rem !important;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6) !important;
+        }
+        
+        /* Color-Specific Popup Borders */
+        .popup-target .leaflet-popup-content-wrapper {
+            border: 2px solid #f43f5e !important; /* กรอบสีแดงสำหรับตัวถูกเทียบ */
+        }
+        .popup-compare .leaflet-popup-content-wrapper {
+            border: 2px solid #10b981 !important; /* กรอบสีเขียวสำหรับตัวเปรียบเทียบ */
         }
 
-        /* Fullscreen Mode Styling */
+        /* Fullscreen Mode Styling (100% Fullscreen True Mode) */
         .fullscreen-mode {
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
             width: 100vw !important;
             height: 100vh !important;
-            z-index: 9999 !important;
+            z-index: 99999 !important;
             background-color: #060911 !important;
-            padding: 24px !important;
+            padding: 16px !important;
+            margin: 0 !important;
             border-radius: 0 !important;
+            border: none !important;
             display: flex !important;
             flex-direction: column !important;
             box-sizing: border-box !important;
             overflow: hidden !important;
         }
-        .fullscreen-mode #gisMap {
-            height: calc(100vh - 120px) !important;
+        .fullscreen-mode #mapGridContainer {
             flex-grow: 1 !important;
+            height: auto !important;
+        }
+        .fullscreen-mode #gisMap1 {
+            height: 100% !important;
+            min-height: calc(100vh - 100px) !important;
         }
         .fullscreen-mode .table-container-box {
-            max-height: calc(100vh - 180px) !important;
+            max-height: calc(100vh - 120px) !important;
             flex-grow: 1 !important;
         }
     </style>
@@ -104,19 +120,19 @@
                 <!-- Brand Title -->
                 <div class="flex items-center space-x-4">
                     <div class="p-3 bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-700 rounded-2xl shadow-lg shadow-cyan-500/20 ring-1 ring-white/20">
-                        <i class="fa-solid fa-chart-network text-2xl text-white"></i>
+                        <i class="fa-solid fa-microchip-ai text-2xl text-white"></i>
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
                             <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
-                                ระบบวิเคราะห์และเปรียบเทียบราคาประเมินที่ดิน
+                                ระบบวิเคราะห์และเปรียบเทียบผลการประเมินราคาที่ดิน (Mass Appraisal Research)
                             </h1>
-                            <span class="bg-cyan-500/10 text-cyan-400 text-[10px] font-semibold px-2.5 py-0.5 rounded-full border border-cyan-500/30 uppercase tracking-widest">
-                                Executive Edition
+                            <span class="bg-purple-500/20 text-purple-300 text-[10px] font-semibold px-2.5 py-0.5 rounded-full border border-purple-500/30 uppercase tracking-widest">
+                                Research Edition
                             </span>
                         </div>
                         <p class="text-xs text-slate-400 mt-0.5">
-                            วิเคราะห์ส่วนต่างระหว่างราคาประเมินธนารักษ์ • ราคาตลาด • และผลลัพธ์จากแบบจำลองวิจัย
+                            เปรียบเทียบราคาประเมินกรมธนารักษ์ • ตาราง 3 (Factor Score) • ราคาเทียบจากรัศมี • และราคาจากแบบจำลองพยากรณ์
                         </p>
                     </div>
                 </div>
@@ -159,51 +175,51 @@
     <!-- Main Content Body -->
     <main class="flex-grow max-w-[1920px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-        <!-- Top KPI Metric Cards -->
+        <!-- SECTION 1: Executive KPI Metrics Panel -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <!-- Total Units -->
             <div class="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl shadow-xl relative overflow-hidden group hover:border-slate-700 transition-all">
                 <div class="absolute top-0 right-0 w-1.5 h-full bg-cyan-500"></div>
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">หน่วยที่ดินทั้งหมด</p>
+                        <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">แปลงประเมินทั้งหมด</p>
                         <h3 class="text-2xl font-bold text-white mt-1 font-mono tracking-tight" id="kpiTotalRows">0</h3>
                         <p class="text-xs text-slate-400 mt-1 flex items-center gap-1" id="kpiSheetName">
                             <i class="fa-solid fa-table text-cyan-400"></i> ข้อมูลเริ่มต้น
                         </p>
                     </div>
                     <div class="p-3 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-xl group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-map-location-dot text-xl"></i>
+                        <i class="fa-solid fa-database text-xl"></i>
                     </div>
                 </div>
             </div>
 
-            <!-- Treasury Price Avg -->
-            <div class="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl shadow-xl relative overflow-hidden group hover:border-slate-700 transition-all">
-                <div class="absolute top-0 right-0 w-1.5 h-full bg-blue-500"></div>
+            <!-- Dynamic Market Data Split Ratio -->
+            <div onclick="setGroupFilter('hasMarket')" class="cursor-pointer bg-slate-900/90 border border-slate-800 p-4 rounded-2xl shadow-xl relative overflow-hidden group hover:border-amber-500/50 transition-all">
+                <div class="absolute top-0 right-0 w-1.5 h-full bg-amber-500"></div>
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">ราคาประเมินธนารักษ์เฉลี่ย</p>
-                        <h3 class="text-2xl font-bold text-blue-400 mt-1 font-mono tracking-tight" id="kpiAvgTreasury">-</h3>
-                        <p class="text-[11px] text-slate-400 mt-1">บาท / ตารางวา</p>
+                        <p class="text-[11px] font-semibold text-amber-400 uppercase tracking-wider">สัดส่วนข้อมูลราคาตลาด</p>
+                        <h3 class="text-xl font-bold text-amber-300 mt-1 font-mono tracking-tight" id="kpiMarketRatio">0% / 0%</h3>
+                        <p class="text-[11px] text-slate-400 mt-1" id="kpiMarketDetail">มีราคาตลาด | พยากรณ์</p>
                     </div>
-                    <div class="p-3 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-xl group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-vault text-xl"></i>
+                    <div class="p-3 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-xl group-hover:scale-110 transition-transform glow-amber">
+                        <i class="fa-solid fa-chart-pie text-xl"></i>
                     </div>
                 </div>
             </div>
 
-            <!-- Model Price Avg -->
+            <!-- Model Performance: MAPE Error -->
             <div class="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl shadow-xl relative overflow-hidden group hover:border-slate-700 transition-all">
-                <div class="absolute top-0 right-0 w-1.5 h-full bg-purple-500"></div>
+                <div class="absolute top-0 right-0 w-1.5 h-full bg-indigo-500"></div>
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">ราคาเฉลี่ยจากแบบจำลอง</p>
-                        <h3 class="text-2xl font-bold text-purple-400 mt-1 font-mono tracking-tight" id="kpiAvgModel">-</h3>
-                        <p class="text-[11px] text-purple-400 mt-1"><i class="fa-solid fa-microchip mr-1"></i>จากงานวิจัย</p>
+                        <p class="text-[11px] font-semibold text-indigo-400 uppercase tracking-wider">ค่าความคลาดเคลื่อน MAPE</p>
+                        <h3 class="text-2xl font-bold text-indigo-300 mt-1 font-mono tracking-tight" id="kpiMapeMetric">- %</h3>
+                        <p class="text-[11px] text-slate-400 mt-1">เทียบราคาแบบจำลอง vs ธนารักษ์</p>
                     </div>
-                    <div class="p-3 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-xl group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-brain-circuit text-xl"></i>
+                    <div class="p-3 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-xl group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-calculator text-xl"></i>
                     </div>
                 </div>
             </div>
@@ -239,16 +255,61 @@
             </div>
         </div>
 
-        <!-- GIS Interactive Map Section -->
+        <!-- SECTION 2: Research Analytics & Validation Charts Panel -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <!-- Multi-Valuation Bar Chart -->
+            <div class="lg:col-span-2 bg-slate-900/90 p-5 rounded-2xl border border-slate-800 shadow-xl">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                    <div>
+                        <h4 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-column text-cyan-400"></i>
+                            เปรียบเทียบชุดราคา: กรมธนารักษ์ vs รัศมีเทียบ vs แบบจำลองพยากรณ์
+                        </h4>
+                        <p class="text-xs text-slate-400 mt-0.5" id="chartSubtitle">แสดงผลราคาต่อหน่วยเปรียบเทียบในแต่ละโซน/แปลงสำรวจ</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="resetSelectedUnit()" id="btnResetChart" class="hidden bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-[11px] font-medium px-3 py-1 rounded-lg transition-all flex items-center gap-1.5 active:scale-95 shadow-md">
+                            <i class="fa-solid fa-rotate-left"></i>
+                            <span>กลับหน้ารวม</span>
+                        </button>
+                        <span class="text-[11px] font-medium text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1 rounded-lg w-fit" id="chartBadgeText">
+                            Top 10 แปลงสำรวจ
+                        </span>
+                    </div>
+                </div>
+                <div class="h-72">
+                    <canvas id="mainValuationChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Scatter Plot: Model Validation -->
+            <div class="bg-slate-900/90 p-5 rounded-2xl border border-slate-800 shadow-xl flex flex-col justify-between">
+                <div>
+                    <h4 class="text-sm font-semibold text-slate-100 flex items-center gap-2 mb-1">
+                        <i class="fa-solid fa-circle-nodes text-amber-400"></i>
+                        Validation (ข้อมูลราคาตลาดจริง)
+                    </h4>
+                    <p class="text-xs text-slate-400" id="scatterSubtitle">Scatter Plot เปรียบเทียบราคาตลาดจริง vs ราคาพยากรณ์</p>
+                </div>
+                <div class="h-60 relative flex items-center justify-center my-1">
+                    <canvas id="scatterValidationChart"></canvas>
+                </div>
+                <div class="text-center bg-slate-950/50 p-2 rounded-xl border border-slate-800">
+                    <p class="text-[11px] text-amber-400/90"><i class="fa-solid fa-shield-halved mr-1"></i>เกาะกลุ่มเส้น $45^\circ$ = แบบจำลองมีความแม่นยำสูง</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 3: Single GIS Map Section -->
         <div id="mapSectionContainer" class="bg-slate-900/90 p-5 rounded-2xl border border-slate-800 shadow-xl space-y-3 transition-all">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                     <h4 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
                         <i class="fa-solid fa-earth-asia text-cyan-400"></i>
-                        แผนที่แสดงขอบเขตแนวถนนและหน่วยที่ดิน (GIS Web Map - Indian 1975 Auto Transformation)
+                        แผนที่เปรียบเทียบโดยใช้ราคาจากรัศมีกลุ่มข้อมูลราคาตลาด
                     </h4>
                     <p class="text-xs text-slate-400 mt-0.5">
-                        เชื่อมโยงข้อมูลระหว่าง Shapefile (<code class="text-cyan-400">STREET_COD</code>) และตารางข้อมูล (<code class="text-cyan-400">รหัสถนน</code>)
+                        แสดงผลเฉพาะ 2 หน่วยเปรียบเทียบ: <span class="text-rose-400 font-semibold"><i class="fa-solid fa-location-dot"></i> ตัวถูกเทียบ (แดง)</span> และ <span class="text-emerald-400 font-semibold"><i class="fa-solid fa-location-dot"></i> ตัวเปรียบเทียบ (เขียว)</span>
                     </p>
                 </div>
                 <div class="flex items-center gap-3 text-xs">
@@ -261,56 +322,25 @@
                     </button>
                 </div>
             </div>
-            <!-- Leaflet Container -->
-            <div id="gisMap" class="h-96 w-full rounded-xl border border-slate-800 relative z-10 overflow-hidden shadow-inner"></div>
-        </div>
 
-        <!-- Executive Analytics Charts Section -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            <!-- Multi-Valuation Bar Chart -->
-            <div class="lg:col-span-2 bg-slate-900/90 p-5 rounded-2xl border border-slate-800 shadow-xl">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-                    <div>
-                        <h4 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
-                            <i class="fa-solid fa-chart-column text-cyan-400"></i>
-                            เปรียบเทียบราคาประเมินธนารักษ์ vs ราคาตลาด (ต่ำสุด-สูงสุด) vs ราคาจากแบบจำลอง
-                        </h4>
-                        <p class="text-xs text-slate-400 mt-0.5" id="chartSubtitle">แสดงข้อมูลราคาต่อหน่วยเปรียบเทียบตามหน่วยที่ดิน</p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button onclick="resetSelectedUnit()" id="btnResetChart" class="hidden bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-[11px] font-medium px-3 py-1 rounded-lg transition-all flex items-center gap-1.5 active:scale-95 shadow-md">
-                            <i class="fa-solid fa-rotate-left"></i>
-                            <span>กลับหน้ารวม</span>
-                        </button>
-                        <span class="text-[11px] font-medium text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1 rounded-lg w-fit" id="chartBadgeText">
-                            Top 10 หน่วยสำรวจ
+            <!-- Single Map Grid Container -->
+            <div id="mapGridContainer" class="w-full">
+                <div class="relative flex flex-col rounded-xl border border-emerald-500/40 overflow-hidden bg-slate-950 shadow-inner">
+                    <div class="bg-emerald-950/90 px-3.5 py-2 border-b border-emerald-500/40 flex items-center justify-between z-10 text-xs shrink-0">
+                        <span class="font-semibold text-emerald-300 flex items-center gap-2">
+                            <i class="fa-solid fa-hand-pointer text-rose-400"></i>
+                            แผนที่แสดงแปลงเปรียบเทียบ (Interactive GIS Map)
+                        </span>
+                        <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30 font-mono">
+                            Comparison Map
                         </span>
                     </div>
-                </div>
-                <div class="h-72">
-                    <canvas id="mainValuationChart"></canvas>
-                </div>
-            </div>
-
-            <!-- Model vs Treasury Variance Doughnut Chart -->
-            <div class="bg-slate-900/90 p-5 rounded-2xl border border-slate-800 shadow-xl flex flex-col justify-between">
-                <div>
-                    <h4 class="text-sm font-semibold text-slate-100 flex items-center gap-2 mb-1">
-                        <i class="fa-solid fa-scale-balanced text-rose-400"></i>
-                        การเปรียบเทียบ: แบบจำลอง vs กรมธนารักษ์
-                    </h4>
-                    <p class="text-xs text-slate-400">สัดส่วนหน่วยที่ราคาแบบจำลองสูงกว่า vs ต่ำกว่า vs เท่ากับราคาประเมิน</p>
-                </div>
-                <div class="h-56 relative flex items-center justify-center my-2">
-                    <canvas id="varianceChart"></canvas>
-                </div>
-                <div class="text-center bg-slate-950/50 p-2.5 rounded-xl border border-slate-800">
-                    <p class="text-xs text-slate-400">ช่วยวิเคราะห์ผลลัพธ์จากการทดสอบแบบจำลอง</p>
+                    <div id="gisMap1" class="w-full h-96 sm:h-[480px] relative z-0 cursor-pointer"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Filter & Search Bar -->
+        <!-- Filter & Search Control Panel -->
         <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 shadow-xl flex flex-col sm:flex-row gap-4 items-center justify-between">
             <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
                 <div class="relative w-full sm:w-80">
@@ -321,37 +351,43 @@
                 <!-- Group Selector Dropdown -->
                 <div class="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 w-full sm:w-auto">
                     <span class="text-xs text-slate-400 font-medium whitespace-nowrap">
-                        <i class="fa-solid fa-filter text-slate-500 mr-1.5"></i>เลือกกลุ่ม:
+                        <i class="fa-solid fa-filter text-slate-500 mr-1.5"></i>เลือกกลุ่มข้อมูล:
                     </span>
                     <select id="groupFilterSelect" onchange="onGroupDropdownChange()" class="bg-slate-900 text-xs text-slate-200 border border-slate-700 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all w-full sm:w-auto font-medium cursor-pointer">
-                        <option value="all">ทั้งหมด</option>
-                        <option value="hasMarket">ราคาประเมินจากข้อมูลตลาด</option>
-                        <option value="noMarket">ราคาประเมินที่ไม่มีข้อมูลตลาด</option>
-                        <option value="higher">สูงกว่า (Model > ธนารักษ์)</option>
-                        <option value="lower">ต่ำกว่า (Model &lt; ธนารักษ์)</option>
-                        <option value="equal">เท่ากับ (Model = ธนารักษ์)</option>
+                        <option value="all">แปลงทั้งหมด (100%)</option>
+                        <option value="hasMarket">มีราคาตลาดสนับสนุน (Validation Set)</option>
+                        <option value="noMarket">ราคาพยากรณ์จากแบบจำลอง (Prediction Set)</option>
+                        <optgroup label="── เปรียบเทียบ: ธนารักษ์ vs รัศมี ──">
+                            <option value="radius_higher">รัศมี สูงกว่า ธนารักษ์</option>
+                            <option value="radius_lower">รัศมี ต่ำกว่า ธนารักษ์</option>
+                        </optgroup>
+                        <optgroup label="── เปรียบเทียบ: ธนารักษ์ vs แบบจำลอง ──">
+                            <option value="higher">แบบจำลอง สูงกว่า ธนารักษ์</option>
+                            <option value="lower">แบบจำลอง ต่ำกว่า ธนารักษ์</option>
+                            <option value="equal">เท่ากัน (ธนารักษ์ = แบบจำลอง)</option>
+                        </optgroup>
                     </select>
                 </div>
             </div>
 
             <div class="flex flex-wrap items-center gap-4 text-xs text-slate-400">
-                <span class="flex items-center gap-1.5 text-cyan-400 font-medium">
-                    <i class="fa-solid fa-hand-pointer text-[10px]"></i> คลิกที่แถวในตารางเพื่อดูกราฟ/ซูมแผนที่
+                <span class="flex items-center gap-1.5 text-amber-400 font-medium">
+                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> มีราคาตลาดจริง
                 </span>
                 <span class="flex items-center gap-1.5 text-rose-400 font-medium">
-                    <span class="w-2 h-2 rounded-full bg-rose-500 inline-block"></span> Model > ธนารักษ์
+                    <span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span> Model > ธนารักษ์
                 </span>
                 <span class="flex items-center gap-1.5 text-emerald-400 font-medium">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> Model &lt; ธนารักษ์
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> Model &lt; ธนารักษ์
                 </span>
             </div>
         </div>
 
-        <!-- Main Executive Data Table -->
+        <!-- SECTION 4: Interactive Parcel Lookup Table -->
         <div id="tableSectionContainer" class="bg-slate-900/90 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden transition-all">
             <div class="bg-slate-950/80 px-5 py-3 border-b border-slate-800 flex items-center justify-between">
                 <h4 class="text-xs font-semibold text-slate-300 flex items-center gap-2">
-                    <i class="fa-solid fa-table text-cyan-400"></i> ตารางแสดงข้อมูลรายละเอียดราคาประเมินที่ดิน
+                    <i class="fa-solid fa-table text-cyan-400"></i> ตารางตรวจสอบข้อมูลรายแปลงและส่วนต่างผลการประเมิน (Parcel Lookup Table)
                 </h4>
                 <button onclick="toggleTableFullscreen()" id="btnTableFullscreen" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 active:scale-95 shadow-md">
                     <i class="fa-solid fa-expand" id="tableFullscreenIcon"></i>
@@ -361,6 +397,9 @@
             <div class="custom-scrollbar overflow-x-auto max-h-[600px] table-container-box">
                 <table class="w-full text-xs text-left border-collapse whitespace-nowrap" id="dataTable">
                     <thead class="bg-slate-950 text-slate-300 uppercase text-[11px] tracking-wider sticky top-0 z-20 shadow-lg">
+                        <tr id="tableHeaderGroupRow">
+                            <!-- Dynamically generated header groups -->
+                        </tr>
                         <tr id="tableHeaderRow">
                             <!-- Dynamically generated headers -->
                         </tr>
@@ -371,14 +410,14 @@
                 </table>
             </div>
             
-            <!-- Table Footer -->
+            <!-- Table Footer Summary -->
             <div class="bg-slate-950/90 px-6 py-4 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center text-xs text-slate-400 gap-3">
                 <span id="recordCountInfo" class="font-medium text-slate-300">กำลังแสดงผล 0 รายการ</span>
                 <div class="flex items-center gap-5">
+                    <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> มีข้อมูลราคาตลาดจริง</span>
                     <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span> Model สูงกว่า</span>
                     <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> Model ต่ำกว่า</span>
-                    <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-slate-400 inline-block"></span> เท่ากัน</span>
-                    <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-slate-700 inline-block"></span> รอการกรอกข้อมูล (-)</span>
+                    <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-slate-500 inline-block"></span> เท่ากัน</span>
                 </div>
             </div>
         </div>
@@ -387,46 +426,43 @@
 
     <!-- JavaScript Application Logic -->
     <script>
-        // Definition of Indian 1975 Projections (Zone 47N & Zone 48N) for Proj4
+        // Indian 1975 Projections (Zone 47N & Zone 48N) Definition for Proj4
         proj4.defs("EPSG:24047", "+proj=utm +zone=47 +a=6377276.345 +b=6356075.41314024 +towgs84=210,814,289,0,0,0,0 +units=m +no_defs");
         proj4.defs("EPSG:24048", "+proj=utm +zone=48 +a=6377276.345 +b=6356075.41314024 +towgs84=210,814,289,0,0,0,0 +units=m +no_defs");
         proj4.defs("EPSG:4326", "+proj=longlat +datum=WGS84 +no_defs");
 
-        // เพิ่ม "Google Maps" ต่อท้ายคอลัมน์มาตรฐาน
+        // Headers ทั้งหมด
         const defaultHeaders = [
-            "สำนักงานที่ดิน", 
-            "รหัสสำนักงานที่ดิน", 
-            "ST_RN/Block price_Rn/ckfix_RN", 
-            "ชื่อหน่วยที่ดิน", 
-            "รหัสถนน", 
-            "ราคากรมธนารักษ์", 
-            "ข้อมูลราคาตลาด (ต่ำสุด)", 
-            "ข้อมูลราคาตลาด (สูงสุด)", 
-            "คะแนนปัจจัย ตลาด(ธนารักษ์)", 
-            "ราคาประเมินจากข้อมูลตลาด", 
-            "ราคาหน่วยที่ไม่มีตลาด", 
-            "หน่วยเทียบจาก ต.3", 
-            "ราคาจากแบบจำลอง", 
-            "เปรียบเทียบ (Model vs ธนารักษ์)", 
-            "ราคาหน่วยไม่มีตลาดเทียบ Model", 
-            "หน่วยเทียบจาก Model",
-            "Google Maps"
+            "สำนักงานที่ดิน",                       // Index 0
+            "รหัสสำนักงานที่ดิน",                   // Index 1
+            "ST_RN/Block price_Rn/ckfix_RN",      // Index 2
+            "ชื่อหน่วยที่ดิน",                        // Index 3 (คอลัมน์ D)
+            "รหัสถนน",                           // Index 4 (คอลัมน์ E)
+            "ราคากรมธนารักษ์",                     // Index 5 (คอลัมน์ F)
+            "ข้อมูลราคาตลาด (ต่ำสุด)",              // Index 6
+            "ข้อมูลราคาตลาด (สูงสุด)",              // Index 7
+            "คะแนนปัจจัย ตลาด(ธนารักษ์)",             // Index 8
+            "ราคาประเมินจากข้อมูลตลาด",            // Index 9
+            "ราคาหน่วยที่เปรียบเทียบ (เทียบจากตาราง 3)", // Index 10 (ตาราง 3)
+            "หน่วยที่นำมา (เทียบจากตาราง 3)",         // Index 11 (ตาราง 3 - ชื่อหน่วยตัวเทียบ / คอลัมน์ N)
+            "คะแนนของหน่วย (เทียบจากตาราง 3)",       // Index 12 (ตาราง 3)
+            "ชื่อหน่วยที่เทียบจากรัศมี",              // Index 13 (รัศมี)
+            "รหัสถนนตัวเปรียบเทียบ (ตาราง 3)",       // Index 14 (คอลัมน์ O - ซ่อนไม่แสดงบนตาราง)
+            "ราคาหน่วยที่เทียบจากรัศมี",              // Index 15 (รัศมี)
+            "ราคาหน่วยที่เปรียบเทียบ (รัศมี)",         // Index 16 (รัศมี)
+            "คะแนนของหน่วยที่เทียบจากรัศมี",          // Index 17 (รัศมี)
+            "ราคาจากแบบจำลอง",                    // Index 18 (แบบจำลอง)
+            "ส่วนต่าง (ธนารักษ์ vs รัศมี)",           // Index 19 (คำนวณชุดที่ 1: ธนารักษ์ vs รัศมี)
+            "ส่วนต่าง (ธนารักษ์ vs แบบจำลอง)"       // Index 20 (คำนวณชุดที่ 2: ธนารักษ์ vs แบบจำลอง)
         ];
 
+        // Mock Data ตัวอย่าง
         const mockSheet1 = [
-            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10004006", "ซอยคลินิกศูนย์แพทย์พัฒนา", "S0332", 80000, "", "", "", "", 80000, 58, 85000, "", "", "Model-A"],
-            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10005403", "ซอยพระราม9ซอย32", "S2834", 100000, "", "", "", "", 100000, 14, 105000, "", "", "Model-A"],
-            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10006827", "ซอยรามคำแหง24/4", "S1861", 100000, "", "", "", "", 100000, 16, 98000, "", "", "Model-A"],
-            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10009406", "ซอยรามคำแหง77", "S1842", 125000, "", "", "", "", 125000, 16, 128000, "", "", "Model-B"],
-            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10010213", "ซอยรามคำแหง52/2ซอย5", "S2455", 135000, 84562.10, 170562.16, "", 135000, "", 12, 142000, "", "", "Model-B"],
-            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10010401", "ซอยรามคำแหง89/2", "S2474", 125000, "", "", "", "", 125000, 17, 120000, "", "", "Model-A"],
-            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10012010", "ซอยรามคำแหง81/1", "S1847", 125000, "", "", "", "", 125000, 16, 129000, "", "", "Model-A"],
-            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10013246", "ซอยทางหัวหมากจากซอยกรุงเทพกรีฑาแยก1-2", "S2134", 30000, "", "", "", "", 30000, 66, 28000, "", "", "Model-C"],
-            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10013818", "ซอยประดิษฐ์มนูธรรม7", "S0081", 80000, "", "", "", "", 80000, 45, 88000, "", "", "Model-B"],
-            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10015802", "ซอยหัวหมาก(หินคลุกแยกจากซอยรามน้ำใจแยก4)", "S0680", 40000, "", "", "", "", 40000, 54, 43000, "", "", "Model-C"],
-            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10022810", "ซอยลาดพร้าว101ซอย31(ทับศักดิ์)", "S1331", 65000, "", "", "", "", 65000, 59, 62000, "", "", "Model-B"],
-            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10021404", "ซอยแยกจากซอยสุภาพงษ์2(ซอยรามคำแหง68แยก1-3)", "S1551", 70000, "", "", "", "", 70000, 48, 74000, "", "", "Model-B"],
-            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10020832", "ซอยลาดพร้าว109แยก7", "S3411", 86000, 67947.61, 100476.19, "", 86000, "", 39, 91000, "", "", "Model-B"]
+            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10004006", "ซอยคลินิกศูนย์แพทย์พัฒนา", "S0332", 80000, 75000, 90000, 85, 82000, 80000, "ซอยพระราม9ซอย32", 88, "ซอยรามคำแหง24/4", "S2834", 85000, 82000, 90, 85000, "", ""],
+            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10005403", "ซอยพระราม9ซอย32", "S2834", 100000, "", "", 90, "", 100000, "ซอยรามคำแหง24/4", 92, "ซอยรามคำแหง77", "S1861", 105000, 100000, 94, 105000, "", ""],
+            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10006827", "ซอยรามคำแหง24/4", "S1861", 100000, 90000, 105000, 88, 97000, 100000, "ซอยคลินิกศูนย์แพทย์พัฒนา", 89, "ซอยรามคำแหง52/2ซอย5", "S0332", 98000, 97000, 91, 98000, "", ""],
+            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10009406", "ซอยรามคำแหง77", "S1842", 125000, "", "", 92, "", 125000, "ซอยรามคำแหง52/2ซอย5", 93, "ซอยรามคำแหง89/2", "S2455", 128000, 125000, 95, 128000, "", ""],
+            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10010213", "ซอยรามคำแหง52/2ซอย5", "S2455", 135000, 84562, 170562, 94, 135000, 135000, "ซอยรามคำแหง89/2", 95, "ซอยรามคำแหง81/1", "S2474", 142000, 138000, 96, 142000, "", ""]
         ];
 
         let workbookData = null;
@@ -437,54 +473,43 @@
         let selectedUnitRow = null;
         let sortDirections = {};
         let mainChartInstance = null;
-        let varianceChartInstance = null;
+        let scatterChartInstance = null;
 
-        // GIS Map Variables
-        let gisMap = null;
-        let geojsonLayer = null;
+        // GIS Map Variables (Single Map)
+        let gisMap1 = null;
+        let geojsonLayer1 = null;
+        let rawGeoJsonData = null;
 
-        // Init App
+        // ตัวแปรเก็บสถานะ Active Popup ของแปลงถูกเทียบและตัวเทียบ
+        let activePopupTargetMap1 = null;
+        let activePopupCompareMap1 = null;
+        let currentSelectedRowMap1 = null;
+
+        // Initialize Application
         window.addEventListener('DOMContentLoaded', () => {
-            initLeafletMap();
+            initLeafletSingleMap();
             applyFilters();
             updateKPIs();
             initCharts();
         });
 
-        // Initialize GIS Web Map
-        function initLeafletMap() {
-            const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                attribution: '&copy; Esri World Imagery',
-                maxZoom: 19
-            });
-
-            const terrainLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
-                attribution: '&copy; Esri World Topo Map',
-                maxZoom: 19
-            });
-
-            const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; CARTO',
-                subdomains: 'abcd',
-                maxZoom: 19
-            });
-
-            gisMap = L.map('gisMap', {
-                center: [13.7563, 100.5018],
-                zoom: 11,
-                layers: [satelliteLayer]
-            });
-
-            const baseMaps = {
-                "ดาวเทียม (Satellite)": satelliteLayer,
-                "ภูมิประเทศ (Terrain)": terrainLayer,
-                "แผนที่มืด (Dark Theme)": darkLayer
+        // Initialize GIS Web Map (Single Map)
+        function initLeafletSingleMap() {
+            const layers1 = {
+                sat: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19 }),
+                topo: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19 }),
+                dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO', maxZoom: 19 })
             };
 
-            L.control.layers(baseMaps, null, { position: 'topright' }).addTo(gisMap);
+            gisMap1 = L.map('gisMap1', {
+                center: [13.7563, 100.5018],
+                zoom: 11,
+                layers: [layers1.sat]
+            });
+
+            L.control.layers({ "ดาวเทียม": layers1.sat, "ภูมิประเทศ": layers1.topo, "แผนที่มืด": layers1.dark }, null, { position: 'topright' }).addTo(gisMap1);
         }
 
-        // Toggle Fullscreen for GIS Map
         function toggleMapFullscreen() {
             const container = document.getElementById('mapSectionContainer');
             const icon = document.getElementById('mapFullscreenIcon');
@@ -500,10 +525,11 @@
                 icon.className = "fa-solid fa-expand";
                 text.textContent = "ขยายเต็มจอ";
             }
-            setTimeout(() => { gisMap.invalidateSize(); }, 200);
+            setTimeout(() => { 
+                gisMap1.invalidateSize(); 
+            }, 200);
         }
 
-        // Toggle Fullscreen for Table
         function toggleTableFullscreen() {
             const container = document.getElementById('tableSectionContainer');
             const icon = document.getElementById('tableFullscreenIcon');
@@ -521,7 +547,6 @@
             }
         }
 
-        // Helper: Convert GeoJSON Coordinates Recursive (Indian 1975 UTM Zone 47N -> WGS84)
         function convertGeoJsonIndian1975ToWGS84(geojson) {
             function transformCoords(coords) {
                 if (typeof coords[0] === 'number') {
@@ -563,8 +588,9 @@
                 const buffer = e.target.result;
                 shp(buffer).then(function(geojson) {
                     const rawData = Array.isArray(geojson) ? geojson[0] : geojson;
-                    const wgs84GeoJson = convertGeoJsonIndian1975ToWGS84(rawData);
-                    renderGeoJsonOnMap(wgs84GeoJson);
+                    rawGeoJsonData = convertGeoJsonIndian1975ToWGS84(rawData);
+                    
+                    renderSingleMap(rawGeoJsonData);
 
                     statusBadge.innerHTML = `<i class="fa-solid fa-check mr-1 text-emerald-400"></i>แปลงพิกัด SHP สำเร็จ (${file.name})`;
                     statusBadge.className = 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-3 py-1 rounded-lg font-mono';
@@ -577,115 +603,199 @@
             reader.readAsArrayBuffer(file);
         }
 
-        function renderGeoJsonOnMap(data) {
-            if (geojsonLayer) {
-                gisMap.removeLayer(geojsonLayer);
+        function renderSingleMap(data) {
+            if (!data) return;
+
+            if (geojsonLayer1) gisMap1.removeLayer(geojsonLayer1);
+
+            geojsonLayer1 = L.geoJSON(data, {
+                style: { color: '#38bdf8', weight: 2, opacity: 0.7, fillColor: '#0284c7', fillOpacity: 0.25 },
+                onEachFeature: (feature, layer) => setupMapFeatureEvents(feature, layer)
+            }).addTo(gisMap1);
+
+            if (geojsonLayer1.getBounds().isValid()) {
+                gisMap1.fitBounds(geojsonLayer1.getBounds());
             }
 
-            geojsonLayer = L.geoJSON(data, {
-                style: function(feature) {
-                    return {
-                        color: '#38bdf8',
-                        weight: 3,
-                        opacity: 0.8,
-                        fillColor: '#0284c7',
-                        fillOpacity: 0.35
-                    };
-                },
-                onEachFeature: function(feature, layer) {
-                    const props = feature.properties || {};
-                    const streetCod = props.STREET_COD || props.street_cod || props.Street_Cod || props.ST_RN || 'N/A';
-                    
-                    const matchedRow = currentRows.find(r => r[4] && r[4].toString().trim() === streetCod.toString().trim());
-                    
-                    // คำนวณพิกัดจุดศูนย์กลางเพื่อสร้างลิงก์ Google Maps
-                    const bounds = layer.getBounds ? layer.getBounds() : null;
-                    const center = bounds ? bounds.getCenter() : null;
-                    const mapUrl = center 
-                        ? `https://www.google.com/maps?q=${center.lat},${center.lng}`
-                        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(matchedRow ? matchedRow[3] : streetCod)}`;
-
-                    let popupContent = `<div style="font-family: 'Prompt', sans-serif; font-size: 12px; line-height: 1.6; min-width: 200px;">
-                        <b style="color: #38bdf8; font-size: 13px;"><i class="fa-solid fa-road"></i> รหัสถนน: ${streetCod}</b><hr style="border-color: #334155; margin: 6px 0;">`;
-                    
-                    if (matchedRow) {
-                        const treasuryVal = parseFloat(matchedRow[5]);
-                        const modelVal = parseFloat(matchedRow[12]);
-                        const unitName = matchedRow[3] || 'ไม่ระบุชื่อหน่วย';
-                        
-                        let diffHtml = '<span style="color: #94a3b8;">-</span>';
-                        if (!isNaN(treasuryVal) && !isNaN(modelVal) && treasuryVal > 0) {
-                            const diffPercent = ((modelVal - treasuryVal) / treasuryVal) * 100;
-                            if (diffPercent > 0) {
-                                diffHtml = `<span style="color: #f43f5e; font-weight: 600;">+${diffPercent.toFixed(1)}% (สูงกว่าธนารักษ์)</span>`;
-                            } else if (diffPercent < 0) {
-                                diffHtml = `<span style="color: #10b981; font-weight: 600;">${diffPercent.toFixed(1)}% (ต่ำกว่าธนารักษ์)</span>`;
-                            } else {
-                                diffHtml = `<span style="color: #cbd5e1; font-weight: 600;">เท่ากัน</span>`;
-                            }
-                        }
-
-                        popupContent += `
-                            <div><b>ชื่อหน่วย:</b> ${unitName}</div>
-                            <div><b>ราคาธนารักษ์:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #38bdf8;">${!isNaN(treasuryVal) ? treasuryVal.toLocaleString('th-TH') : '-'}</span> บ./ตร.ว.</div>
-                            <div><b>ราคา Model:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #a855f7;">${!isNaN(modelVal) ? modelVal.toLocaleString('th-TH') : '-'}</span> บ./ตร.ว.</div>
-                            <div><b>อัตราเปรียบเทียบ:</b> ${diffHtml}</div>
-                        `;
-                    } else {
-                        popupContent += `<div style="color: #94a3b8; font-style: italic;">ไม่พบข้อมูลราคาจับคู่ในตาราง</div>`;
-                    }
-
-                    // ปุ่มเปิด Google Maps ใน Pop-up
-                    popupContent += `
-                        <div style="margin-top: 10px;">
-                            <a href="${mapUrl}" target="_blank" style="display: inline-flex; items-center: center; gap: 6px; background-color: #0284c7; color: white; padding: 5px 10px; border-radius: 6px; text-decoration: none; font-size: 11px; font-weight: 500;">
-                                <i class="fa-solid fa-map-location-dot"></i> เปิดใน Google Maps
-                            </a>
-                        </div>
-                    </div>`;
-
-                    layer.bindPopup(popupContent);
-
-                    layer.on('click', () => {
-                        if (matchedRow) {
-                            selectedUnitRow = matchedRow;
-                            renderTable(currentHeaders, filteredRows);
-                            updateCharts();
-                            highlightFeatureOnMap(streetCod);
-                        }
-                    });
-                }
-            }).addTo(gisMap);
-
-            if (geojsonLayer.getBounds().isValid()) {
-                gisMap.fitBounds(geojsonLayer.getBounds());
+            if (selectedUnitRow) {
+                highlightSingleMap(selectedUnitRow);
             }
         }
 
-        function highlightFeatureOnMap(streetCode) {
-            if (!geojsonLayer) return;
+        // ตั้งค่า Event เมื่อคลิกแปลงบนแผนที่
+        function setupMapFeatureEvents(feature, layer) {
+            const props = feature.properties || {};
+            const streetCod = props.STREET_COD || props.street_cod || props.Street_Cod || props.ST_RN || 'N/A';
+            const matchedRow = currentRows.find(r => r[4] && r[4].toString().trim() === streetCod.toString().trim());
 
-            let matchedLayer = null;
-
-            geojsonLayer.eachLayer(layer => {
-                const props = layer.feature.properties || {};
-                const cod = props.STREET_COD || props.street_cod || props.Street_Cod || props.ST_RN || '';
-
-                if (cod.toString().trim() === streetCode.toString().trim()) {
-                    matchedLayer = layer;
-                    layer.setStyle({
-                        color: '#f43f5e',
-                        weight: 5,
-                        fillColor: '#fb7185',
-                        fillOpacity: 0.75
-                    });
+            layer.on('click', () => {
+                if (matchedRow) {
+                    selectedUnitRow = matchedRow;
+                    renderTable(currentHeaders, filteredRows);
+                    updateCharts();
+                    highlightSingleMap(selectedUnitRow);
+                    
+                    const tableRowIdx = filteredRows.indexOf(selectedUnitRow);
+                    if (tableRowIdx !== -1) {
+                        const tableBody = document.getElementById('tableBody');
+                        const targetTr = tableBody.children[tableRowIdx];
+                        if (targetTr) {
+                            targetTr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }
                 } else {
-                    geojsonLayer.resetStyle(layer);
+                    const centerLatLng = layer.getBounds().getCenter();
+                    const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${centerLatLng.lat},${centerLatLng.lng}`;
+                    
+                    const simpleContent = `<div style="font-family: 'Prompt', sans-serif; font-size: 12px; line-height: 1.5; min-width: 180px;">
+                        <b style="color: #38bdf8;"><i class="fa-solid fa-road"></i> รหัสถนน: ${streetCod}</b>
+                        <div style="color: #94a3b8; font-style: italic; margin-top: 4px;">ไม่มีข้อมูลราคาจับคู่ในระบบ</div>
+                        <hr style="border-color: #334155; margin: 6px 0;">
+                        <a href="${gmapsUrl}" target="_blank" style="display: block; width: 100%; text-align: center; background: #0284c7; color: white; padding: 4px; border-radius: 4px; text-decoration: none; font-size: 11px;">Google Maps</a>
+                    </div>`;
+                    L.popup().setLatLng(centerLatLng).setContent(simpleContent).openOn(gisMap1);
                 }
             });
+        }
 
-            if (matchedLayer && matchedLayer.getBounds().isValid()) {
-                gisMap.fitBounds(matchedLayer.getBounds(), { maxZoom: 17, animate: true });
+        // ฟังก์ชันไฮไลท์และสั่งเปิด Popup บนแผนที่เดียว (ซ่อนแปลงอื่นทั้งหมด แสดงเฉพาะ 2 แปลงนี้)
+        function highlightSingleMap(targetRow) {
+            if (!targetRow) return;
+
+            const targetStreetCod = targetRow[4] ? targetRow[4].toString().trim() : ''; 
+            const compareStreetCod = targetRow[14] ? targetRow[14].toString().trim() : ''; 
+
+            // 1. เคลียร์ Popup เก่าออกทั้งหมด
+            if (activePopupTargetMap1) {
+                gisMap1.removeLayer(activePopupTargetMap1);
+                activePopupTargetMap1 = null;
+            }
+            if (activePopupCompareMap1) {
+                gisMap1.removeLayer(activePopupCompareMap1);
+                activePopupCompareMap1 = null;
+            }
+
+            gisMap1.closePopup();
+            currentSelectedRowMap1 = targetRow;
+
+            let targetLayerFoundMap1 = null;
+            let compareLayerFoundMap1 = null;
+
+            // 2. ซ่อนแปลงอื่นๆ ให้เห็นเฉพาะ 2 แปลงนี้
+            if (geojsonLayer1) {
+                geojsonLayer1.eachLayer(layer => {
+                    const cod = (layer.feature.properties?.STREET_COD || layer.feature.properties?.ST_RN || layer.feature.properties?.Street_Cod || '').toString().trim();
+                    if (cod === targetStreetCod) {
+                        targetLayerFoundMap1 = layer;
+                    } else if (cod === compareStreetCod) {
+                        compareLayerFoundMap1 = layer;
+                    } else {
+                        // ซ่อนแปลงอื่นๆ
+                        layer.setStyle({ opacity: 0, fillOpacity: 0 });
+                    }
+                });
+            }
+
+            // 3. เปิด Popup ตัวที่ 1 (ตัวถูกเปรียบเทียบ - สีแดง)
+            if (targetLayerFoundMap1) {
+                targetLayerFoundMap1.setStyle({ color: '#f43f5e', weight: 6, opacity: 1, fillColor: '#f43f5e', fillOpacity: 0.85 });
+                targetLayerFoundMap1.bringToFront();
+
+                const centerLatLng = targetLayerFoundMap1.getBounds().getCenter();
+                const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${centerLatLng.lat},${centerLatLng.lng}`;
+                
+                const targetFactorScore = parseFloat(targetRow[8]); // คะแนนปัจจัย
+                const treasuryPrice = parseFloat(targetRow[5]);     // ราคากรมธนารักษ์
+                const radiusPriceVal = parseFloat(targetRow[15]);   // ราคาหน่วยที่เทียบจากรัศมี
+                const modelPriceVal = parseFloat(targetRow[18]);    // ราคาจากแบบจำลอง
+                const isMarketAvailable = hasMarketData(targetRow);  // เช็คข้อความแจ้งว่าเป็นข้อมูลราคาตลาดหรือไม่
+
+                const popupRedContent = `
+                    <div style="font-family: 'Prompt', sans-serif; font-size: 12px; line-height: 1.5; min-width: 220px;">
+                        <div style="background: #f43f5e; color: white; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; display: inline-block; margin-bottom: 6px;">
+                            🔴 ตัวถูกเปรียบเทียบ (แปลงหลัก)
+                        </div>
+                        <div style="font-size: 13px; font-weight: bold; color: #f87171; margin-bottom: 2px;">${targetRow[3] || 'N/A'}</div>
+                        <div style="color: #94a3b8; font-size: 11px; margin-bottom: 4px;"><i class="fa-solid fa-road"></i> รหัสถนน: ${targetStreetCod}</div>
+                        <div><b>คะแนนปัจจัย:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #f87171; font-weight: bold;">${!isNaN(targetFactorScore) ? targetFactorScore.toLocaleString('th-TH') : '-'}</span></div>
+                        
+                        ${isMarketAvailable ? '<div style="color: #f59e0b; font-weight: bold; font-size: 11px; margin: 4px 0;"><i class="fa-solid fa-circle-check"></i> ข้อมูลราคาตลาด</div>' : ''}
+                        
+                        <div><b>ราคากรมธนารักษ์:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #38bdf8; font-weight: bold;">${!isNaN(treasuryPrice) ? treasuryPrice.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
+                        <div><b>ราคาหน่วยที่เทียบจากรัศมี:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #38bdf8; font-weight: bold;">${!isNaN(radiusPriceVal) ? radiusPriceVal.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
+                        <div><b>ราคาจากแบบจำลอง:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #a855f7; font-weight: bold;">${!isNaN(modelPriceVal) ? modelPriceVal.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
+                        
+                        <hr style="border-color: #334155; margin: 8px 0 6px 0;">
+                        <a href="${gmapsUrl}" target="_blank" style="display: block; width: 100%; text-align: center; background: linear-gradient(to right, #0284c7, #2563eb); color: white; padding: 6px 10px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 11px;">
+                            <i class="fa-solid fa-map-location-dot"></i> ไปยัง Google Maps
+                        </a>
+                    </div>
+                `;
+
+                activePopupTargetMap1 = L.popup({ autoClose: false, closeOnClick: false, className: 'popup-target', offset: [180, -60] })
+                    .setLatLng(centerLatLng)
+                    .setContent(popupRedContent)
+                    .openOn(gisMap1);
+            }
+
+            // 4. เปิด Popup ตัวที่ 2 (ตัวเปรียบเทียบ - สีเขียว)
+            if (compareLayerFoundMap1) {
+                compareLayerFoundMap1.setStyle({ color: '#10b981', weight: 6, opacity: 1, fillColor: '#34d399', fillOpacity: 0.85 });
+                compareLayerFoundMap1.bringToFront();
+
+                const compareRow = currentRows.find(r => {
+                    const nameN = r[3] ? r[3].toString().trim() : '';
+                    const codeO = r[4] ? r[4].toString().trim() : '';
+                    const targetNameN = targetRow[11] ? targetRow[11].toString().trim() : '';
+                    const targetCodeO = targetRow[14] ? targetRow[14].toString().trim() : '';
+                    return (nameN !== '' && nameN === targetNameN) || (codeO !== '' && codeO === targetCodeO);
+                });
+
+                const compareUnitName = compareRow ? compareRow[3] : (targetRow[11] || 'N/A');
+                const compareTreasuryPrice = compareRow && !isNaN(parseFloat(compareRow[5])) 
+                    ? parseFloat(compareRow[5]) 
+                    : (targetRow[10] ? parseFloat(targetRow[10]) : NaN);
+                
+                const compareModelPrice = compareRow && !isNaN(parseFloat(compareRow[18]))
+                    ? parseFloat(compareRow[18])
+                    : NaN;
+
+                const radiusScoreVal = parseFloat(targetRow[17]); // คะแนนของหน่วยที่เทียบจากรัศมี
+                const table3ScoreVal = parseFloat(targetRow[12]); // คะแนนของหน่วย (เทียบจากตาราง 3)
+                const compareScoreVal = !isNaN(radiusScoreVal) ? radiusScoreVal : (!isNaN(table3ScoreVal) ? table3ScoreVal : (compareRow ? parseFloat(compareRow[8]) : NaN));
+
+                const centerLatLng = compareLayerFoundMap1.getBounds().getCenter();
+                const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${centerLatLng.lat},${centerLatLng.lng}`;
+
+                const popupGreenContent = `
+                    <div style="font-family: 'Prompt', sans-serif; font-size: 12px; line-height: 1.5; min-width: 210px;">
+                        <div style="background: #10b981; color: white; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; display: inline-block; margin-bottom: 6px;">
+                            🟢 ตัวเปรียบเทียบ
+                        </div>
+                        <div style="font-size: 13px; font-weight: bold; color: #34d399; margin-bottom: 2px;">${compareUnitName}</div>
+                        <div style="color: #94a3b8; font-size: 11px; margin-bottom: 4px;"><i class="fa-solid fa-road"></i> รหัสถนนตัวเทียบ: ${compareStreetCod}</div>
+                        <div><b>คะแนนปัจจัย:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #34d399; font-weight: bold;">${!isNaN(compareScoreVal) ? compareScoreVal.toLocaleString('th-TH') : '-'}</span></div>
+                        <div><b>ราคากรมธนารักษ์:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #34d399; font-weight: bold;">${!isNaN(compareTreasuryPrice) ? compareTreasuryPrice.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
+                        <div><b>ราคาจากแบบจำลอง:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #a855f7; font-weight: bold;">${!isNaN(compareModelPrice) ? compareModelPrice.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
+                        <hr style="border-color: #334155; margin: 8px 0 6px 0;">
+                        <a href="${gmapsUrl}" target="_blank" style="display: block; width: 100%; text-align: center; background: linear-gradient(to right, #0284c7, #2563eb); color: white; padding: 6px 10px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 11px;">
+                            <i class="fa-solid fa-map-location-dot"></i> ไปยัง Google Maps
+                        </a>
+                    </div>
+                `;
+
+                activePopupCompareMap1 = L.popup({ autoClose: false, closeOnClick: false, className: 'popup-compare', offset: [-180, 60] })
+                    .setLatLng(centerLatLng)
+                    .setContent(popupGreenContent)
+                    .openOn(gisMap1);
+            }
+
+            // Zoom & Pan แผนที่ให้ครอบคลุมทั้ง 2 แปลงพอดี
+            if (targetLayerFoundMap1 && compareLayerFoundMap1) {
+                const featureGroup = L.featureGroup([targetLayerFoundMap1, compareLayerFoundMap1]);
+                gisMap1.fitBounds(featureGroup.getBounds(), { padding: [60, 60] });
+            } else if (targetLayerFoundMap1) {
+                gisMap1.fitBounds(targetLayerFoundMap1.getBounds(), { padding: [60, 60] });
             }
         }
 
@@ -765,9 +875,8 @@
             renderTable(currentHeaders, filteredRows);
             updateCharts();
 
-            const streetCode = selectedUnitRow[4];
-            if (streetCode) {
-                highlightFeatureOnMap(streetCode);
+            if (selectedUnitRow) {
+                highlightSingleMap(selectedUnitRow);
             }
 
             document.getElementById('mainValuationChart').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -775,37 +884,46 @@
 
         function resetSelectedUnit() {
             selectedUnitRow = null;
-            if (geojsonLayer) {
-                geojsonLayer.eachLayer(layer => geojsonLayer.resetStyle(layer));
-                gisMap.fitBounds(geojsonLayer.getBounds());
+            if (activePopupTargetMap1) { gisMap1.removeLayer(activePopupTargetMap1); activePopupTargetMap1 = null; }
+            if (activePopupCompareMap1) { gisMap1.removeLayer(activePopupCompareMap1); activePopupCompareMap1 = null; }
+            
+            if (geojsonLayer1 && rawGeoJsonData) {
+                renderSingleMap(rawGeoJsonData);
             }
             renderTable(currentHeaders, filteredRows);
             updateCharts();
+        }
+
+        function hasMarketData(row) {
+            const val = row[9]; 
+            return val !== undefined && val !== null && val !== '' && !isNaN(parseFloat(val));
         }
 
         function applyFilters() {
             const query = document.getElementById('searchInput').value.toLowerCase();
 
             filteredRows = currentRows.filter(row => {
-                const treasury = parseFloat(row[5]);
-                const model = parseFloat(row[12]);
-                const marketEval = row[9];
-                const hasMarketEvalVal = marketEval !== undefined && marketEval !== null && marketEval !== '';
+                const treasuryVal = parseFloat(row[5]);
+                const radiusVal = parseFloat(row[15]);
+                const modelVal = parseFloat(row[18]);
+                const marketAvailable = hasMarketData(row);
 
                 let matchesGroup = true;
                 if (selectedGroupFilter !== 'all') {
                     if (selectedGroupFilter === 'hasMarket') {
-                        matchesGroup = hasMarketEvalVal;
+                        matchesGroup = marketAvailable;
                     } else if (selectedGroupFilter === 'noMarket') {
-                        matchesGroup = !hasMarketEvalVal;
-                    } else if (isNaN(treasury) || isNaN(model)) {
-                        matchesGroup = false;
+                        matchesGroup = !marketAvailable;
+                    } else if (selectedGroupFilter === 'radius_higher') {
+                        matchesGroup = !isNaN(treasuryVal) && !isNaN(radiusVal) && radiusVal > treasuryVal;
+                    } else if (selectedGroupFilter === 'radius_lower') {
+                        matchesGroup = !isNaN(treasuryVal) && !isNaN(radiusVal) && radiusVal < treasuryVal;
                     } else if (selectedGroupFilter === 'higher') {
-                        matchesGroup = model > treasury;
+                        matchesGroup = !isNaN(treasuryVal) && !isNaN(modelVal) && modelVal > treasuryVal;
                     } else if (selectedGroupFilter === 'lower') {
-                        matchesGroup = model < treasury;
+                        matchesGroup = !isNaN(treasuryVal) && !isNaN(modelVal) && modelVal < treasuryVal;
                     } else if (selectedGroupFilter === 'equal') {
-                        matchesGroup = model === treasury;
+                        matchesGroup = !isNaN(treasuryVal) && !isNaN(modelVal) && modelVal === treasuryVal;
                     }
                 }
 
@@ -826,44 +944,57 @@
         }
 
         function renderTable(headers, rows) {
+            const headerGroupRow = document.getElementById('tableHeaderGroupRow');
             const headerRow = document.getElementById('tableHeaderRow');
             const tableBody = document.getElementById('tableBody');
 
-            headerRow.innerHTML = headers.map((h, colIndex) => `
-                <th onclick="sortTable(${colIndex})" class="th-sortable px-4 py-3.5 border-b border-slate-800 font-medium text-slate-300">
-                    <div class="flex items-center justify-between gap-2">
-                        <span>${h}</span>
-                        <i class="fa-solid fa-sort text-slate-600 text-[10px]"></i>
-                    </div>
+            headerGroupRow.innerHTML = `
+                <th colspan="10" class="bg-slate-950 border-b border-slate-800 py-1 text-center text-slate-500 font-normal text-[10px]">ข้อมูลมาตรฐานและข้อมูลราคาตลาด (ตรวจสอบข้อเท็จจริงในตาราง)</th>
+                <th colspan="3" class="bg-emerald-950/80 border-b border-emerald-500/40 text-emerald-300 py-1 text-center font-semibold text-[11px] uppercase tracking-wider">
+                    <i class="fa-solid fa-table mr-1"></i> เทียบจากตาราง 3
                 </th>
-            `).join('');
+                <th colspan="5" class="bg-sky-950/80 border-b border-sky-500/40 text-sky-300 py-1 text-center font-semibold text-[11px] uppercase tracking-wider">
+                    <i class="fa-solid fa-compass mr-1"></i> เทียบจากรัศมี (แบบจำลอง)
+                </th>
+                <th colspan="2" class="bg-amber-950/80 border-b border-amber-500/40 text-amber-300 py-1 text-center font-semibold text-[11px] uppercase tracking-wider">
+                    <i class="fa-solid fa-scale-balanced mr-1"></i> ส่วนต่างเปรียบเทียบ
+                </th>
+            `;
+
+            headerRow.innerHTML = headers.map((h, colIndex) => {
+                if (colIndex === 14) return '';
+
+                let bgStyle = "bg-slate-950 text-slate-300";
+                
+                if (colIndex >= 10 && colIndex <= 12) {
+                    bgStyle = "bg-emerald-950/90 text-emerald-300 border-x border-emerald-800/40";
+                }
+                else if (colIndex >= 13 && colIndex <= 18) {
+                    bgStyle = "bg-sky-950/90 text-sky-300 border-x border-sky-800/40";
+                }
+                else if (colIndex >= 19) {
+                    bgStyle = "bg-amber-950/90 text-amber-300 border-x border-amber-800/40";
+                }
+
+                return `
+                    <th onclick="sortTable(${colIndex})" class="th-sortable px-4 py-3 border-b border-slate-800 font-medium ${bgStyle}">
+                        <div class="flex items-center justify-between gap-2">
+                            <span>${h}</span>
+                            <i class="fa-solid fa-sort text-slate-600 text-[10px]"></i>
+                        </div>
+                    </th>
+                `;
+            }).join('');
 
             if (rows.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="${headers.length}" class="text-center py-10 text-slate-500">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td></tr>`;
+                tableBody.innerHTML = `<tr><td colspan="${headers.length - 1}" class="text-center py-10 text-slate-500">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td></tr>`;
             } else {
                 tableBody.innerHTML = rows.map((row, idx) => {
                     const treasuryVal = parseFloat(row[5]);
-                    const modelVal = parseFloat(row[12]);
+                    const modelVal = parseFloat(row[18]); 
+                    const isMarketAvailable = hasMarketData(row);
                     const isSelected = selectedUnitRow === row;
                     
-                    let diffBadge = '<span class="text-slate-600 font-mono">-</span>';
-                    if (!isNaN(treasuryVal) && !isNaN(modelVal) && treasuryVal > 0) {
-                        const diffPercent = ((modelVal - treasuryVal) / treasuryVal) * 100;
-                        if (diffPercent > 0) {
-                            diffBadge = `<span class="inline-flex items-center gap-1 bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[10px] px-2 py-0.5 rounded-full font-mono font-medium">
-                                <i class="fa-solid fa-arrow-up text-[9px]"></i> +${diffPercent.toFixed(1)}% (สูงกว่า)
-                            </span>`;
-                        } else if (diffPercent < 0) {
-                            diffBadge = `<span class="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] px-2 py-0.5 rounded-full font-mono font-medium">
-                                <i class="fa-solid fa-arrow-down text-[9px]"></i> ${diffPercent.toFixed(1)}% (ต่ำกว่า)
-                            </span>`;
-                        } else {
-                            diffBadge = `<span class="inline-flex items-center gap-1 bg-slate-500/10 text-slate-300 border border-slate-500/20 text-[10px] px-2 py-0.5 rounded-full font-mono">
-                                เท่ากัน
-                            </span>`;
-                        }
-                    }
-
                     const activeRowClass = isSelected 
                         ? 'bg-cyan-950/60 ring-1 ring-cyan-500/50 text-cyan-200 font-medium' 
                         : 'hover:bg-slate-800/50 transition-colors cursor-pointer';
@@ -871,36 +1002,36 @@
                     return `
                         <tr onclick="selectUnitRow(${idx})" class="${activeRowClass}">
                             ${headers.map((_, colIdx) => {
-                                // คอลัมน์พิเศษที่ 13: เปรียบเทียบ Model vs ธนารักษ์
-                                if (colIdx === 13) {
-                                    return `<td class="px-4 py-3 border-b border-slate-800/60">${diffBadge}</td>`;
+                                if (colIdx === 14) return '';
+
+                                if (colIdx === 19 || colIdx === 20) {
+                                    const tVal = parseFloat(row[5]); // ราคากรมธนารักษ์
+                                    const compVal = colIdx === 19 ? parseFloat(row[15]) : parseFloat(row[18]); // Index 15 = ราคาเทียบรัศมี, Index 18 = ราคา Model
+                                    let bBadge = '<span class="text-slate-600 font-mono">-</span>';
+                                    if (!isNaN(tVal) && !isNaN(compVal) && tVal > 0) {
+                                        const dPct = ((compVal - tVal) / tVal) * 100;
+                                        if (dPct > 0) {
+                                            bBadge = `<span class="inline-flex items-center gap-1 bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[10px] px-2 py-0.5 rounded-full font-mono font-medium">
+                                                <i class="fa-solid fa-arrow-up text-[9px]"></i> +${dPct.toFixed(1)}%
+                                            </span>`;
+                                        } else if (dPct < 0) {
+                                            bBadge = `<span class="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] px-2 py-0.5 rounded-full font-mono font-medium">
+                                                <i class="fa-solid fa-arrow-down text-[9px]"></i> ${dPct.toFixed(1)}%
+                                            </span>`;
+                                        } else {
+                                            bBadge = `<span class="inline-flex items-center gap-1 bg-slate-500/10 text-slate-300 border border-slate-500/20 text-[10px] px-2 py-0.5 rounded-full font-mono">เท่ากัน</span>`;
+                                        }
+                                    }
+                                    return `<td class="px-4 py-3 border-b border-slate-800/60">${bBadge}</td>`;
                                 }
 
-                                // คอลัมน์พิเศษที่ 16: ปุ่ม Google Maps
-                                if (colIdx === 16) {
-                                    const landName = row[3] || '';
-                                    const landOffice = row[0] || '';
-                                    const queryText = encodeURIComponent(`${landName} ${landOffice}`);
-                                    const mapSearchUrl = `https://www.google.com/maps/search/?api=1&query=${queryText}`;
-
-                                    return `
-                                        <td class="px-4 py-3 border-b border-slate-800/60 text-center" onclick="event.stopPropagation();">
-                                            <a href="${mapSearchUrl}" target="_blank" title="เปิด Google Maps" class="inline-flex items-center gap-1.5 bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 px-2.5 py-1 rounded-lg text-[11px] transition-all duration-150 active:scale-95 shadow-sm">
-                                                <i class="fa-solid fa-location-dot"></i>
-                                                <span>นำทาง</span>
-                                            </a>
-                                        </td>
-                                    `;
-                                }
-
-                                const rawIdx = colIdx > 13 ? colIdx - 1 : colIdx;
-                                const val = row[rawIdx];
+                                const val = row[colIdx];
                                 const isNum = typeof val === 'number';
                                 const isEmpty = val === undefined || val === null || val === '';
                                 
                                 let displayVal = '<span class="text-slate-600 font-mono">-</span>';
                                 if (!isEmpty) {
-                                    if (rawIdx === 1 || rawIdx === 2) {
+                                    if (colIdx === 1 || colIdx === 2) {
                                         displayVal = val.toString();
                                     } else if (isNum) {
                                         displayVal = val.toLocaleString('th-TH', { maximumFractionDigits: 2 });
@@ -909,13 +1040,24 @@
                                     }
                                 }
                                 
-                                let numStyle = (isNum || rawIdx === 1 || rawIdx === 2) ? 'text-right font-mono font-medium ' : '';
-                                if (colIdx === 5) numStyle += 'text-cyan-400 ';
-                                if (colIdx === 6 || colIdx === 7) numStyle += 'text-emerald-400 ';
-                                if (colIdx === 9) numStyle += 'text-amber-400 ';
-                                if (colIdx === 12) numStyle += 'text-purple-400 ';
+                                let cellStyle = (isNum || colIdx === 1 || colIdx === 2) ? 'text-right font-mono font-medium ' : '';
+                                if (colIdx === 3 && isMarketAvailable) cellStyle += 'font-semibold text-amber-300 ';
+                                if (colIdx === 5) cellStyle += 'text-cyan-400 ';
+                                if (colIdx === 6 || colIdx === 7) cellStyle += 'text-emerald-400 ';
+                                if (colIdx === 9) cellStyle += 'text-amber-400 font-bold ';
+                                
+                                if (colIdx >= 10 && colIdx <= 12) {
+                                    cellStyle += 'bg-emerald-950/20 text-emerald-200 border-x border-emerald-900/20 ';
+                                }
+                                if (colIdx >= 13 && colIdx <= 18) {
+                                    cellStyle += 'bg-sky-950/20 text-sky-200 border-x border-sky-900/20 ';
+                                }
+                                if (colIdx >= 19) {
+                                    cellStyle += 'bg-amber-950/20 text-amber-200 border-x border-amber-900/20 ';
+                                }
+                                if (colIdx === 18) cellStyle += 'text-purple-300 font-bold ';
 
-                                return `<td class="px-4 py-3 border-b border-slate-800/60 ${isSelected ? 'text-cyan-100' : 'text-slate-300'} ${numStyle}">${displayVal}</td>`;
+                                return `<td class="px-4 py-3 border-b border-slate-800/60 ${isSelected ? 'text-cyan-100' : ''} ${cellStyle}">${displayVal}</td>`;
                             }).join('')}
                         </tr>
                     `;
@@ -941,7 +1083,7 @@
                 } else {
                     return currentDir === 'asc' 
                         ? valA.toString().localeCompare(valB.toString(), 'th') 
-                        : valB.toString().localeCompare(valA.toString(), 'th');
+                        : valB.toString().localeCompare(a[colIndex].toString(), 'th');
                 }
             });
 
@@ -953,39 +1095,51 @@
             document.getElementById('kpiTotalRows').textContent = currentRows.length.toLocaleString();
             document.getElementById('kpiSheetName').innerHTML = `<i class="fa-solid fa-table text-cyan-400"></i> ${sheetName}`;
 
-            let sumTreasury = 0, countTreasury = 0;
-            let sumModel = 0, countModel = 0;
-            let higherCount = 0, lowerCount = 0;
+            let countMarket = 0;
+            let countPredicted = 0;
+            let sumMape = 0;
+            let validMapeCount = 0;
+            let higherCount = 0;
+            let lowerCount = 0;
 
             currentRows.forEach(row => {
                 const treasury = parseFloat(row[5]);
-                const model = parseFloat(row[12]);
+                const model = parseFloat(row[18]); 
+                const marketAvailable = hasMarketData(row);
 
-                if (!isNaN(treasury)) { sumTreasury += treasury; countTreasury++; }
-                if (!isNaN(model)) { sumModel += model; countModel++; }
+                if (marketAvailable) countMarket++;
+                else countPredicted++;
 
-                if (!isNaN(treasury) && !isNaN(model)) {
+                if (!isNaN(treasury) && !isNaN(model) && treasury > 0) {
+                    const mapeVal = (Math.abs(model - treasury) / treasury) * 100;
+                    sumMape += mapeVal;
+                    validMapeCount++;
+
                     if (model > treasury) higherCount++;
                     else if (model < treasury) lowerCount++;
                 }
             });
 
-            const avgTreasury = countTreasury > 0 ? (sumTreasury / countTreasury) : 0;
-            const avgModel = countModel > 0 ? (sumModel / countModel) : 0;
+            const total = currentRows.length || 1;
+            const marketPct = ((countMarket / total) * 100).toFixed(1);
+            const predPct = ((countPredicted / total) * 100).toFixed(1);
+            const avgMape = validMapeCount > 0 ? (sumMape / validMapeCount).toFixed(1) : '-';
 
-            document.getElementById('kpiAvgTreasury').textContent = avgTreasury ? avgTreasury.toLocaleString('th-TH', { maximumFractionDigits: 0 }) : '-';
-            document.getElementById('kpiAvgModel').textContent = avgModel ? avgModel.toLocaleString('th-TH', { maximumFractionDigits: 0 }) : '-';
+            document.getElementById('kpiMarketRatio').textContent = `${marketPct}% / ${predPct}%`;
+            document.getElementById('kpiMarketDetail').textContent = `${countMarket.toLocaleString()} แปลงตลาด | ${countPredicted.toLocaleString()} แปลงพยากรณ์`;
+
+            document.getElementById('kpiMapeMetric').textContent = `${avgMape}%`;
             
-            document.getElementById('kpiModelHigherCount').textContent = `${higherCount.toLocaleString()} หน่วย`;
-            document.getElementById('kpiModelHigherPercent').textContent = `${((higherCount / (currentRows.length || 1)) * 100).toFixed(1)}% ของหน่วยทั้งหมด`;
+            document.getElementById('kpiModelHigherCount').textContent = `${higherCount.toLocaleString()} แปลง`;
+            document.getElementById('kpiModelHigherPercent').textContent = `${((higherCount / total) * 100).toFixed(1)}% ของแปลงทั้งหมด`;
 
-            document.getElementById('kpiModelLowerCount').textContent = `${lowerCount.toLocaleString()} หน่วย`;
-            document.getElementById('kpiModelLowerPercent').textContent = `${((lowerCount / (currentRows.length || 1)) * 100).toFixed(1)}% ของหน่วยทั้งหมด`;
+            document.getElementById('kpiModelLowerCount').textContent = `${lowerCount.toLocaleString()} แปลง`;
+            document.getElementById('kpiModelLowerPercent').textContent = `${((lowerCount / total) * 100).toFixed(1)}% ของแปลงทั้งหมด`;
         }
 
         function initCharts() {
             const ctx1 = document.getElementById('mainValuationChart').getContext('2d');
-            const ctx2 = document.getElementById('varianceChart').getContext('2d');
+            const ctx2 = document.getElementById('scatterValidationChart').getContext('2d');
 
             mainChartInstance = new Chart(ctx1, {
                 type: 'bar',
@@ -1003,43 +1157,58 @@
                 }
             });
 
-            varianceChartInstance = new Chart(ctx2, {
-                type: 'doughnut',
-                data: getVarianceChartData(),
+            scatterChartInstance = new Chart(ctx2, {
+                type: 'scatter',
+                data: getScatterChartData(),
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Prompt', size: 11 } } }
+                        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Prompt', size: 10 } } }
                     },
-                    cutout: '70%'
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'ราคาประเมินจากข้อมูลตลาด (Market Price)', color: '#f59e0b', font: { family: 'Prompt', size: 10 } },
+                            ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 9 } },
+                            grid: { color: '#1e293b' }
+                        },
+                        y: {
+                            title: { display: true, text: 'ราคาจากแบบจำลอง (Model Price)', color: '#a855f7', font: { family: 'Prompt', size: 10 } },
+                            ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 9 } },
+                            grid: { color: '#1e293b' }
+                        }
+                    }
                 }
             });
         }
 
         function updateCharts() {
-            if (mainChartInstance && varianceChartInstance) {
+            if (mainChartInstance && scatterChartInstance) {
                 const btnReset = document.getElementById('btnResetChart');
                 const badgeText = document.getElementById('chartBadgeText');
                 const subtitleText = document.getElementById('chartSubtitle');
+                const scatterSubtitle = document.getElementById('scatterSubtitle');
 
                 if (selectedUnitRow) {
                     btnReset.classList.remove('hidden');
                     const unitName = selectedUnitRow[3] || 'หน่วยที่เลือก';
-                    badgeText.textContent = `หน่วยเฉพาะ: ${unitName.length > 20 ? unitName.substring(0,20) + '...' : unitName}`;
+                    badgeText.textContent = `แปลงเฉพาะ: ${unitName.length > 20 ? unitName.substring(0,20) + '...' : unitName}`;
                     badgeText.className = "text-[11px] font-medium text-purple-300 bg-purple-500/20 border border-purple-500/40 px-3 py-1 rounded-lg w-fit";
-                    subtitleText.textContent = `เจาะลึกราคาเปรียบเทียบเฉพาะหน่วยที่ดิน: ${unitName}`;
+                    subtitleText.textContent = `เจาะลึกราคาเปรียบเทียบเฉพาะแปลงที่ดิน: ${unitName}`;
                 } else {
                     btnReset.classList.add('hidden');
-                    badgeText.textContent = "Top 10 หน่วยสำรวจ";
+                    badgeText.textContent = "Top 10 แปลงสำรวจ";
                     badgeText.className = "text-[11px] font-medium text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1 rounded-lg w-fit";
-                    subtitleText.textContent = "แสดงข้อมูลราคาต่อหน่วยเปรียบเทียบตามหน่วยที่ดิน";
+                    subtitleText.textContent = "แสดงผลราคาต่อหน่วยเปรียบเทียบ 3 ชุดราคาหลัก";
                 }
+
+                const marketCountInFiltered = filteredRows.filter(hasMarketData).length;
+                scatterSubtitle.textContent = `Scatter Plot แสดงผล ${marketCountInFiltered.toLocaleString()} แปลงที่มีข้อมูลราคาตลาดจริง`;
 
                 mainChartInstance.data = getMainChartData();
                 mainChartInstance.update();
-                varianceChartInstance.data = getVarianceChartData();
-                varianceChartInstance.update();
+                scatterChartInstance.data = getScatterChartData();
+                scatterChartInstance.update();
             }
         }
 
@@ -1049,10 +1218,9 @@
                 return {
                     labels: [label],
                     datasets: [
-                        { label: 'ราคาธนารักษ์', data: [parseFloat(selectedUnitRow[5]) || 0], backgroundColor: '#3b82f6', borderRadius: 6 },
-                        { label: 'ราคาตลาด (ต่ำสุด)', data: [parseFloat(selectedUnitRow[6]) || 0], backgroundColor: '#10b981', borderRadius: 6 },
-                        { label: 'ราคาตลาด (สูงสุด)', data: [parseFloat(selectedUnitRow[7]) || 0], backgroundColor: '#f59e0b', borderRadius: 6 },
-                        { label: 'ราคาแบบจำลอง (Model)', data: [parseFloat(selectedUnitRow[12]) || 0], backgroundColor: '#a855f7', borderRadius: 6 }
+                        { label: 'ราคากรมธนารักษ์', data: [parseFloat(selectedUnitRow[5]) || 0], backgroundColor: '#3b82f6', borderRadius: 6 },
+                        { label: 'ราคาเทียบจากรัศมี', data: [parseFloat(selectedUnitRow[15]) || 0], backgroundColor: '#38bdf8', borderRadius: 6 },
+                        { label: 'ราคาจากแบบจำลอง', data: [parseFloat(selectedUnitRow[18]) || 0], backgroundColor: '#a855f7', borderRadius: 6 }
                     ]
                 };
             }
@@ -1061,47 +1229,60 @@
             const labels = sampleRows.map(r => r[3] ? (r[3].length > 14 ? r[3].substring(0, 14) + '...' : r[3]) : 'N/A');
             
             const treasuryPrices = sampleRows.map(r => parseFloat(r[5]) || 0);
-            const marketMinPrices = sampleRows.map(r => parseFloat(r[6]) || 0);
-            const marketMaxPrices = sampleRows.map(r => parseFloat(r[7]) || 0);
-            const modelPrices = sampleRows.map(r => parseFloat(r[12]) || 0);
+            const radiusPrices = sampleRows.map(r => parseFloat(r[15]) || 0);
+            const modelPrices = sampleRows.map(r => parseFloat(r[18]) || 0);
 
             return {
                 labels: labels,
                 datasets: [
-                    { label: 'ราคาธนารักษ์', data: treasuryPrices, backgroundColor: '#3b82f6', borderRadius: 4 },
-                    { label: 'ราคาตลาด (ต่ำสุด)', data: marketMinPrices, backgroundColor: '#10b981', borderRadius: 4 },
-                    { label: 'ราคาตลาด (สูงสุด)', data: marketMaxPrices, backgroundColor: '#f59e0b', borderRadius: 4 },
-                    { label: 'ราคาแบบจำลอง (Model)', data: modelPrices, backgroundColor: '#a855f7', borderRadius: 4 }
+                    { label: 'ราคากรมธนารักษ์', data: treasuryPrices, backgroundColor: '#3b82f6', borderRadius: 4 },
+                    { label: 'ราคาเทียบจากรัศมี', data: radiusPrices, backgroundColor: '#38bdf8', borderRadius: 4 },
+                    { label: 'ราคาจากแบบจำลอง', data: modelPrices, backgroundColor: '#a855f7', borderRadius: 4 }
                 ]
             };
         }
 
-        function getVarianceChartData() {
-            let higher = 0;
-            let lower = 0;
-            let equal = 0;
-            let noData = 0;
+        function getScatterChartData() {
+            const scatterPoints = [];
+            let maxVal = 0;
 
             filteredRows.forEach(row => {
-                const treasury = parseFloat(row[5]);
-                const model = parseFloat(row[12]);
+                if (hasMarketData(row)) {
+                    const marketVal = parseFloat(row[9]); 
+                    const modelVal = parseFloat(row[18]);  
 
-                if (!isNaN(treasury) && !isNaN(model)) {
-                    if (model > treasury) higher++;
-                    else if (model < treasury) lower++;
-                    else equal++;
-                } else {
-                    noData++;
+                    if (!isNaN(marketVal) && !isNaN(modelVal)) {
+                        scatterPoints.push({ x: marketVal, y: modelVal });
+                        if (marketVal > maxVal) maxVal = marketVal;
+                        if (modelVal > maxVal) maxVal = modelVal;
+                    }
                 }
             });
 
+            const idealLine = [{ x: 0, y: 0 }, { x: maxVal || 150000, y: maxVal || 150000 }];
+
             return {
-                labels: ['แบบจำลอง สูงกว่า', 'แบบจำลอง ต่ำกว่า', 'เท่ากัน', 'รอข้อมูลเทียบ'],
-                datasets: [{
-                    data: [higher, lower, equal, noData],
-                    backgroundColor: ['#f43f5e', '#10b981', '#94a3b8', '#334155'],
-                    borderWidth: 0
-                }]
+                datasets: [
+                    {
+                        label: 'แปลงที่มีข้อมูลราคาตลาดจริง',
+                        data: scatterPoints,
+                        backgroundColor: '#f59e0b',
+                        borderColor: '#fbbf24',
+                        borderWidth: 1,
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    },
+                    {
+                        label: 'เส้น Ideal 45°',
+                        data: idealLine,
+                        type: 'line',
+                        borderColor: '#94a3b8',
+                        borderDash: [5, 5],
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        fill: false
+                    }
+                ]
             };
         }
     </script>
