@@ -449,12 +449,12 @@
             "ราคาหน่วยที่",                                     // Index 10 (ตาราง 3)
             "หน่วยที่นำมา",                                     // Index 11 (ตาราง 3)
             "ชื่อหน่วยที่นำมาเปรียบเทียบ (ต.3)",                   // Index 12 (ตาราง 3)
-            "รหัสถนน",                                        // Index 13 (ซ่อน)
+            "รหัสถนน",                                        // Index 13 (ซ่อน - คอลัมน์ N)
             "คะแนนปัจจัยหน่วยเทียบ",                            // Index 14 (คะแนนคอลัมน์ O)
             "ราคาหน่วย",                                      // Index 15 (ตาราง 3)
             "ราคาประเมินแบบเทียบตาราง 3",                         // Index 16 (ราคาประเมินแบบเทียบตาราง 3)
             "ชื่อหน่วยที่เทียบจากรัศมี",                           // Index 17 (รัศมี)
-            "รหัสถนน",                                        // Index 18 (ซ่อน - รหัสถนนตัวเทียบตาราง 3 / คอลัมน์ N)
+            "รหัสถนน",                                        // Index 18 (ซ่อน - คอลัมน์ S)
             "ราคาหน่วยที่เทียบจาก",                             // Index 19 (รัศมี)
             "ราคาหน่วยที่",                                     // Index 20 (รัศมี)
             "คะแนนของหน่วยที่",                                // Index 21 (รัศมี)
@@ -669,24 +669,26 @@
             });
         }
 
-        // ฟังก์ชันไฮไลท์และเปิด Popup 3 หน้าต่างบนแผนที่ (ใช้ Smart Offset กระจายออกรอบนอก ไม่บังทับตัวแปลง)
+        // ฟังก์ชันไฮไลท์และเปิด Popup 3 หน้าต่างบนแผนที่ (อัปเดตรหัสถนน: ตาราง 3 ใช้คอลัมน์ N / รัศมีใช้คอลัมน์ S)
         function highlightSingleMap(targetRow) {
             if (!targetRow) return;
 
             const targetStreetCod = targetRow[4] ? targetRow[4].toString().trim() : ''; 
-            const table3StreetCod = targetRow[18] ? targetRow[18].toString().trim() : ''; // รหัสถนนตาราง 3 คอลัมน์ N
-            const radiusStreetCod = targetRow[13] ? targetRow[13].toString().trim() : ''; // รหัสถนนรัศมี
+            const table3StreetCod = targetRow[13] ? targetRow[13].toString().trim() : ''; // รหัสถนนตาราง 3 จาก คอลัมน์ N (Index 13)
+            const radiusStreetCod = targetRow[18] ? targetRow[18].toString().trim() : ''; // รหัสถนนตัวเทียบรัศมี จาก คอลัมน์ S (Index 18)
 
-            // ค้นหารากฐานราคากรมธนารักษ์ของหน่วยเทียบตาราง 3 และหน่วยเทียบรัศมี จากฐานข้อมูล currentRows
+            // ค้นหาแถวเต็มของหน่วยเทียบตาราง 3 และหน่วยเทียบรัศมี จากฐานข้อมูล currentRows
+            let foundRowT3 = null;
             let table3TreasuryPrice = NaN;
             if (table3StreetCod) {
-                const foundRowT3 = currentRows.find(r => r[4] && r[4].toString().trim() === table3StreetCod);
+                foundRowT3 = currentRows.find(r => r[4] && r[4].toString().trim() === table3StreetCod);
                 if (foundRowT3) table3TreasuryPrice = parseFloat(foundRowT3[5]);
             }
 
+            let foundRowRad = null;
             let radiusTreasuryPrice = NaN;
             if (radiusStreetCod) {
-                const foundRowRad = currentRows.find(r => r[4] && r[4].toString().trim() === radiusStreetCod);
+                foundRowRad = currentRows.find(r => r[4] && r[4].toString().trim() === radiusStreetCod);
                 if (foundRowRad) radiusTreasuryPrice = parseFloat(foundRowRad[5]);
             }
 
@@ -764,7 +766,7 @@
                     .openOn(gisMap1);
             }
 
-            // 4. เปิด Popup หน้าต่างที่ 2: ตัวเทียบตาราง 3 (สีน้ำเงิน) - แสดงราคากรมธนารักษ์
+            // 4. เปิด Popup หน้าต่างที่ 2: ตัวเทียบตาราง 3 (สีน้ำเงิน)
             if (table3LayerFound) {
                 table3LayerFound.setStyle({ color: '#3b82f6', weight: 6, opacity: 1, fillColor: '#60a5fa', fillOpacity: 0.85 });
                 table3LayerFound.bringToFront();
@@ -774,11 +776,16 @@
                 const table3Score = parseFloat(targetRow[14]);       
                 const displayT3Price = !isNaN(table3TreasuryPrice) ? table3TreasuryPrice : parseFloat(targetRow[16]);
 
+                // ดึงราคาต่ำสุด-สูงสุด และราคาแบบจำลองของหน่วยเทียบตาราง 3
+                const t3MinPrice = foundRowT3 ? parseFloat(foundRowT3[6]) : NaN;
+                const t3MaxPrice = foundRowT3 ? parseFloat(foundRowT3[7]) : NaN;
+                const t3ModelPrice = foundRowT3 ? parseFloat(foundRowT3[22]) : NaN;
+
                 const centerLatLng = table3LayerFound.getBounds().getCenter();
                 const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${centerLatLng.lat},${centerLatLng.lng}`;
 
                 const popupBlueContent = `
-                    <div style="font-family: 'Prompt', sans-serif; font-size: 12px; line-height: 1.5; min-width: 210px;">
+                    <div style="font-family: 'Prompt', sans-serif; font-size: 12px; line-height: 1.5; min-width: 230px;">
                         <div style="background: #3b82f6; color: white; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; display: inline-block; margin-bottom: 6px;">
                             🔵 ตัวเทียบตาราง 3 
                         </div>
@@ -786,6 +793,9 @@
                         <div style="color: #94a3b8; font-size: 11px; margin-bottom: 4px;"><i class="fa-solid fa-road"></i> รหัสถนน: ${table3StreetCod}</div>
                         <div><b>คะแนนปัจจัยหน่วย :</b> <span style="font-family: 'JetBrains Mono', monospace; color: #60a5fa; font-weight: bold;">${!isNaN(table3Score) ? table3Score.toLocaleString('th-TH') : '-'}</span></div>
                         <div style="margin-top: 4px;"><b>ราคากรมธนารักษ์:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #3b82f6; font-weight: bold;">${!isNaN(displayT3Price) ? displayT3Price.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
+                        <div><b>ราคาตลาด (ต่ำสุด):</b> <span style="font-family: 'JetBrains Mono', monospace; color: #34d399; font-weight: bold;">${!isNaN(t3MinPrice) ? t3MinPrice.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
+                        <div><b>ราคาตลาด (สูงสุด):</b> <span style="font-family: 'JetBrains Mono', monospace; color: #f87171; font-weight: bold;">${!isNaN(t3MaxPrice) ? t3MaxPrice.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
+                        <div><b>ราคาจากแบบจำลอง:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #a855f7; font-weight: bold;">${!isNaN(t3ModelPrice) ? t3ModelPrice.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
                         <hr style="border-color: #334155; margin: 8px 0 6px 0;">
                         <a href="${gmapsUrl}" target="_blank" style="display: block; width: 100%; text-align: center; background: linear-gradient(to right, #0284c7, #2563eb); color: white; padding: 6px 10px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 11px;">
                             <i class="fa-solid fa-map-location-dot"></i> ไปยัง Google Maps
@@ -799,7 +809,7 @@
                     .openOn(gisMap1);
             }
 
-            // 5. เปิด Popup หน้าต่างที่ 3: ตัวเทียบจากรัศมี (สีเขียว) - แสดงราคากรมธนารักษ์
+            // 5. เปิด Popup หน้าต่างที่ 3: ตัวเทียบจากรัศมี (สีเขียว)
             if (radiusLayerFound) {
                 radiusLayerFound.setStyle({ color: '#10b981', weight: 6, opacity: 1, fillColor: '#34d399', fillOpacity: 0.85 });
                 radiusLayerFound.bringToFront();
@@ -809,11 +819,16 @@
                 const radiusScoreVal = parseFloat(targetRow[21]);
                 const displayRadPrice = !isNaN(radiusTreasuryPrice) ? radiusTreasuryPrice : parseFloat(targetRow[19]);
 
+                // ดึงราคาต่ำสุด-สูงสุด และราคาแบบจำลองของหน่วยเทียบรัศมี
+                const radMinPrice = foundRowRad ? parseFloat(foundRowRad[6]) : NaN;
+                const radMaxPrice = foundRowRad ? parseFloat(foundRowRad[7]) : NaN;
+                const radModelPrice = foundRowRad ? parseFloat(foundRowRad[22]) : NaN;
+
                 const centerLatLng = radiusLayerFound.getBounds().getCenter();
                 const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${centerLatLng.lat},${centerLatLng.lng}`;
 
                 const popupGreenContent = `
-                    <div style="font-family: 'Prompt', sans-serif; font-size: 12px; line-height: 1.5; min-width: 210px;">
+                    <div style="font-family: 'Prompt', sans-serif; font-size: 12px; line-height: 1.5; min-width: 230px;">
                         <div style="background: #10b981; color: white; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; display: inline-block; margin-bottom: 6px;">
                             🟢 ตัวเทียบจากรัศมี
                         </div>
@@ -821,6 +836,9 @@
                         <div style="color: #94a3b8; font-size: 11px; margin-bottom: 4px;"><i class="fa-solid fa-road"></i> รหัสถนน: ${radiusStreetCod}</div>
                         <div><b>คะแนนของหน่วย:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #34d399; font-weight: bold;">${!isNaN(radiusScoreVal) ? radiusScoreVal.toLocaleString('th-TH') : '-'}</span></div>
                         <div style="margin-top: 4px;"><b>ราคากรมธนารักษ์:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #10b981; font-weight: bold;">${!isNaN(displayRadPrice) ? displayRadPrice.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
+                        <div><b>ราคาตลาด (ต่ำสุด):</b> <span style="font-family: 'JetBrains Mono', monospace; color: #34d399; font-weight: bold;">${!isNaN(radMinPrice) ? radMinPrice.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
+                        <div><b>ราคาตลาด (สูงสุด):</b> <span style="font-family: 'JetBrains Mono', monospace; color: #f87171; font-weight: bold;">${!isNaN(radMaxPrice) ? radMaxPrice.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
+                        <div><b>ราคาจากแบบจำลอง:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #a855f7; font-weight: bold;">${!isNaN(radModelPrice) ? radModelPrice.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
                         <hr style="border-color: #334155; margin: 8px 0 6px 0;">
                         <a href="${gmapsUrl}" target="_blank" style="display: block; width: 100%; text-align: center; background: linear-gradient(to right, #0284c7, #2563eb); color: white; padding: 6px 10px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 11px;">
                             <i class="fa-solid fa-map-location-dot"></i> ไปยัง Google Maps
