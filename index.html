@@ -74,8 +74,11 @@
         .popup-target .leaflet-popup-content-wrapper {
             border: 2px solid #f43f5e !important; /* กรอบสีแดงสำหรับตัวถูกเทียบ */
         }
-        .popup-compare .leaflet-popup-content-wrapper {
-            border: 2px solid #10b981 !important; /* กรอบสีเขียวสำหรับตัวเปรียบเทียบ */
+        .popup-table3 .leaflet-popup-content-wrapper {
+            border: 2px solid #3b82f6 !important; /* กรอบสีน้ำเงินสำหรับตัวเทียบตาราง 3 */
+        }
+        .popup-radius .leaflet-popup-content-wrapper {
+            border: 2px solid #10b981 !important; /* กรอบสีเขียวสำหรับตัวเทียบรัศมี */
         }
 
         /* Fullscreen Mode Styling (100% Fullscreen True Mode) */
@@ -257,15 +260,15 @@
 
         <!-- SECTION 2: Research Analytics & Validation Charts Panel -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            <!-- Multi-Valuation Bar Chart -->
+            <!-- Multi-Valuation Bar Chart (แสดง 4 แท่งราคา) -->
             <div class="lg:col-span-2 bg-slate-900/90 p-5 rounded-2xl border border-slate-800 shadow-xl">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
                     <div>
                         <h4 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
                             <i class="fa-solid fa-chart-column text-cyan-400"></i>
-                            เปรียบเทียบชุดราคา: กรมธนารักษ์ vs รัศมีเทียบ vs แบบจำลองพยากรณ์
+                            เปรียบเทียบชุดราคา: ธนารักษ์ vs ตาราง 3 vs รัศมี vs แบบจำลอง
                         </h4>
-                        <p class="text-xs text-slate-400 mt-0.5" id="chartSubtitle">แสดงผลราคาต่อหน่วยเปรียบเทียบในแต่ละโซน/แปลงสำรวจ</p>
+                        <p class="text-xs text-slate-400 mt-0.5" id="chartSubtitle">แสดงผลราคาต่อหน่วยเปรียบเทียบ 4 ชุดราคาหลักในแต่ละโซน/แปลงสำรวจ</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <button onclick="resetSelectedUnit()" id="btnResetChart" class="hidden bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-[11px] font-medium px-3 py-1 rounded-lg transition-all flex items-center gap-1.5 active:scale-95 shadow-md">
@@ -306,10 +309,10 @@
                 <div>
                     <h4 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
                         <i class="fa-solid fa-earth-asia text-cyan-400"></i>
-                        แผนที่เปรียบเทียบราคาธนารักษ์ VS ราคาเทียบเคียงโดยใช้รัศมี VS ราคาจากแบบจำลอง
+                        แผนที่แสดงแปลงเปรียบเทียบ 3 หน้าต่าง (แปลงหลัก | ตาราง 3 | รัศมี)
                     </h4>
                     <p class="text-xs text-slate-400 mt-0.5">
-                        แสดงผลเฉพาะ 2 หน่วยเปรียบเทียบ: <span class="text-rose-400 font-semibold"><i class="fa-solid fa-location-dot"></i> ตัวถูกเทียบ (แดง)</span> และ <span class="text-emerald-400 font-semibold"><i class="fa-solid fa-location-dot"></i> ตัวเปรียบเทียบ (เขียว)</span>
+                        แสดงผล 3 สี: <span class="text-rose-400 font-semibold">🔴 ตัวถูกเทียบ</span>, <span class="text-blue-400 font-semibold">🔵 ตัวเทียบตาราง 3</span>, <span class="text-emerald-400 font-semibold">🟢 ตัวเทียบรัศมี</span>
                     </p>
                 </div>
                 <div class="flex items-center gap-3 text-xs">
@@ -329,10 +332,10 @@
                     <div class="bg-emerald-950/90 px-3.5 py-2 border-b border-emerald-500/40 flex items-center justify-between z-10 text-xs shrink-0">
                         <span class="font-semibold text-emerald-300 flex items-center gap-2">
                             <i class="fa-solid fa-hand-pointer text-rose-400"></i>
-                            แผนที่แสดงแปลงเปรียบเทียบ (Interactive GIS Map)
+                            แผนที่แสดงแปลงเปรียบเทียบ 3 หน้าต่าง (Interactive GIS Map)
                         </span>
                         <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30 font-mono">
-                            Comparison Map
+                            Multi-Comparison Map
                         </span>
                     </div>
                     <div id="gisMap1" class="w-full h-96 sm:h-[480px] relative z-0 cursor-pointer"></div>
@@ -345,7 +348,7 @@
             <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
                 <div class="relative w-full sm:w-80">
                     <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
-                    <input type="text" id="searchInput" onkeyup="applyFilters()" placeholder="ค้นหาชื่อหน่วยที่ดิน, รหัสถนน, สำนักงานที่ดิน..." class="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-950 text-slate-200 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all">
+                    <input type="text" id="searchInput" onkeyup="applyFilters()" placeholder="ค้นหาชื่อหน่วยที่ดิน, สำนักงานที่ดิน..." class="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-950 text-slate-200 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all">
                 </div>
 
                 <!-- Group Selector Dropdown -->
@@ -431,38 +434,45 @@
         proj4.defs("EPSG:24048", "+proj=utm +zone=48 +a=6377276.345 +b=6356075.41314024 +towgs84=210,814,289,0,0,0,0 +units=m +no_defs");
         proj4.defs("EPSG:4326", "+proj=longlat +datum=WGS84 +no_defs");
 
-        // Headers ทั้งหมด
+        // ชื่อคอลัมน์เต็มตามโครงสร้างเป๊ะๆ
         const defaultHeaders = [
-            "สำนักงานที่ดิน",                       // Index 0
-            "รหัสสำนักงานที่ดิน",                   // Index 1
-            "ST_RN/Block price_Rn/ckfix_RN",      // Index 2
-            "ชื่อหน่วยที่ดิน",                        // Index 3 (คอลัมน์ D)
-            "รหัสถนน",                           // Index 4 (คอลัมน์ E)
-            "ราคากรมธนารักษ์",                     // Index 5 (คอลัมน์ F)
-            "ข้อมูลราคาตลาด (ต่ำสุด)",              // Index 6
-            "ข้อมูลราคาตลาด (สูงสุด)",              // Index 7
-            "คะแนนปัจจัย ตลาด(ธนารักษ์)",             // Index 8
-            "ราคาประเมินจากข้อมูลตลาด",            // Index 9
-            "ราคาหน่วยที่เปรียบเทียบ (เทียบจากตาราง 3)", // Index 10 (ตาราง 3)
-            "หน่วยที่นำมา (เทียบจากตาราง 3)",         // Index 11 (ตาราง 3 - ชื่อหน่วยตัวเทียบ / คอลัมน์ N)
-            "คะแนนของหน่วย (เทียบจากตาราง 3)",       // Index 12 (ตาราง 3)
-            "ชื่อหน่วยที่เทียบจากรัศมี",              // Index 13 (รัศมี)
-            "รหัสถนนตัวเปรียบเทียบ (ตาราง 3)",       // Index 14 (คอลัมน์ O - ซ่อนไม่แสดงบนตาราง)
-            "ราคาหน่วยที่เทียบจากรัศมี",              // Index 15 (รัศมี)
-            "ราคาหน่วยที่เปรียบเทียบ (รัศมี)",         // Index 16 (รัศมี)
-            "คะแนนของหน่วยที่เทียบจากรัศมี",          // Index 17 (รัศมี)
-            "ราคาจากแบบจำลอง",                    // Index 18 (แบบจำลอง)
-            "ส่วนต่าง (ธนารักษ์ vs รัศมี)",           // Index 19 (คำนวณชุดที่ 1: ธนารักษ์ vs รัศมี)
-            "ส่วนต่าง (ธนารักษ์ vs แบบจำลอง)"       // Index 20 (คำนวณชุดที่ 2: ธนารักษ์ vs แบบจำลอง)
+            "สำนักงานที่ดิน",                                     // Index 0
+            "รหัสสำนักงานที่ดิน",                                // Index 1
+            "ST_RN/Blockp",                                    // Index 2
+            "ชื่อหน่วยที่ดิน",                                     // Index 3
+            "รหัสถนน",                                        // Index 4 (ซ่อน)
+            "ราคากรมธนารักษ์",                                  // Index 5
+            "ข้อมูลราคาตลาด (ต่ำสุด)",                          // Index 6
+            "ข้อมูลราคาตลาด (สูงสุด)",                          // Index 7
+            "คะแนนปัจจัย",                                    // Index 8
+            "ราคาประเมินจากข้อมูล",                             // Index 9
+            "ราคาหน่วยที่",                                     // Index 10 (ตาราง 3)
+            "หน่วยที่นำมา",                                     // Index 11 (ตาราง 3)
+            "ชื่อหน่วยที่นำมาเปรียบเทียบ (ต.3)",                   // Index 12 (ตาราง 3)
+            "รหัสถนน",                                        // Index 13 (ซ่อน)
+            "คะแนนปัจจัยหน่วยเทียบ",                            // Index 14 (คะแนนคอลัมน์ O)
+            "ราคาหน่วย",                                      // Index 15 (ตาราง 3)
+            "ราคาประเมินแบบเทียบตาราง 3",                         // Index 16 (ราคาประเมินแบบเทียบตาราง 3)
+            "ชื่อหน่วยที่เทียบจากรัศมี",                           // Index 17 (รัศมี)
+            "รหัสถนน",                                        // Index 18 (ซ่อน - รหัสถนนตัวเทียบตาราง 3 / คอลัมน์ N)
+            "ราคาหน่วยที่เทียบจาก",                             // Index 19 (รัศมี)
+            "ราคาหน่วยที่",                                     // Index 20 (รัศมี)
+            "คะแนนของหน่วยที่",                                // Index 21 (รัศมี)
+            "ราคาจากแบบจำลอง",                                 // Index 22 (แบบจำลอง)
+            "ส่วนต่าง (ธนารักษ์ vs รัศมี)",                        // Index 23
+            "ส่วนต่าง (ธนารักษ์ vs แบบจำลอง)"                    // Index 24
         ];
+
+        // กำหนด Index ของคอลัมน์รหัสถนนที่ต้องการซ่อน (Index 4, 13, 18)
+        const hiddenHeaderIndices = [4, 13, 18];
 
         // Mock Data ตัวอย่าง
         const mockSheet1 = [
-            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10004006", "ซอยคลินิกศูนย์แพทย์พัฒนา", "S0332", 80000, 75000, 90000, 85, 82000, 80000, "ซอยพระราม9ซอย32", 88, "ซอยรามคำแหง24/4", "S2834", 85000, 82000, 90, 85000, "", ""],
-            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10005403", "ซอยพระราม9ซอย32", "S2834", 100000, "", "", 90, "", 100000, "ซอยรามคำแหง24/4", 92, "ซอยรามคำแหง77", "S1861", 105000, 100000, 94, 105000, "", ""],
-            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10006827", "ซอยรามคำแหง24/4", "S1861", 100000, 90000, 105000, 88, 97000, 100000, "ซอยคลินิกศูนย์แพทย์พัฒนา", 89, "ซอยรามคำแหง52/2ซอย5", "S0332", 98000, 97000, 91, 98000, "", ""],
-            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10009406", "ซอยรามคำแหง77", "S1842", 125000, "", "", 92, "", 125000, "ซอยรามคำแหง52/2ซอย5", 93, "ซอยรามคำแหง89/2", "S2455", 128000, 125000, 95, 128000, "", ""],
-            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10010213", "ซอยรามคำแหง52/2ซอย5", "S2455", 135000, 84562, 170562, 94, 135000, 135000, "ซอยรามคำแหง89/2", 95, "ซอยรามคำแหง81/1", "S2474", 142000, 138000, 96, 142000, "", ""]
+            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10004006", "ซอยคลินิกศูนย์แพทย์พัฒนา", "S0332", 80000, 75000, 90000, 85, 82000, 80000, "ซอยพระราม9ซอย32", "ซอยพระราม9ซอย32", "S2834", 88, 80000, 82500, "ซอยรามคำแหง24/4", "S2834", 85000, 82000, 90, 85000, "", ""],
+            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10005403", "ซอยพระราม9ซอย32", "S2834", 100000, "", "", 90, "", 100000, "ซอยรามคำแหง24/4", "ซอยรามคำแหง24/4", "S1861", 92, 100000, 102000, "ซอยรามคำแหง77", "S1861", 105000, 100000, 94, 105000, "", ""],
+            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10006827", "ซอยรามคำแหง24/4", "S1861", 100000, 90000, 105000, 88, 97000, 100000, "ซอยคลินิกศูนย์แพทย์พัฒนา", "ซอยคลินิกศูนย์แพทย์พัฒนา", "S0332", 89, 100000, 99000, "ซอยรามคำแหง52/2ซอย5", "S0332", 98000, 97000, 91, 98000, "", ""],
+            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10009406", "ซอยรามคำแหง77", "S1842", 125000, "", "", 92, "", 125000, "ซอยรามคำแหง52/2ซอย5", "ซอยรามคำแหง52/2ซอย5", "S2455", 93, 125000, 126000, "ซอยรามคำแหง89/2", "S2455", 128000, 125000, 95, 128000, "", ""],
+            ["สำนักงานที่ดินกรุงเทพมหานคร สาขาบางกะปิ", "10030000", "10010213", "ซอยรามคำแหง52/2ซอย5", "S2455", 135000, 84562, 170562, 94, 135000, 135000, "ซอยรามคำแหง89/2", "ซอยรามคำแหง89/2", "S2474", 95, 135000, 137000, "ซอยรามคำแหง81/1", "S2474", 142000, 138000, 96, 142000, "", ""]
         ];
 
         let workbookData = null;
@@ -480,9 +490,10 @@
         let geojsonLayer1 = null;
         let rawGeoJsonData = null;
 
-        // ตัวแปรเก็บสถานะ Active Popup ของแปลงถูกเทียบและตัวเทียบ
+        // ตัวแปรเก็บสถานะ Active Popup ทั้ง 3 หน้าต่างบนแผนที่
         let activePopupTargetMap1 = null;
-        let activePopupCompareMap1 = null;
+        let activePopupTable3Map1 = null;
+        let activePopupRadiusMap1 = null;
         let currentSelectedRowMap1 = null;
 
         // Initialize Application
@@ -658,37 +669,50 @@
             });
         }
 
-        // ฟังก์ชันไฮไลท์และสั่งเปิด Popup บนแผนที่เดียว (ซ่อนแปลงอื่นทั้งหมด แสดงเฉพาะ 2 แปลงนี้)
+        // ฟังก์ชันไฮไลท์และเปิด Popup 3 หน้าต่างบนแผนที่ (ใช้ Smart Offset กระจายออกรอบนอก ไม่บังทับตัวแปลง)
         function highlightSingleMap(targetRow) {
             if (!targetRow) return;
 
             const targetStreetCod = targetRow[4] ? targetRow[4].toString().trim() : ''; 
-            const compareStreetCod = targetRow[14] ? targetRow[14].toString().trim() : ''; 
+            const table3StreetCod = targetRow[18] ? targetRow[18].toString().trim() : ''; // รหัสถนนตาราง 3 คอลัมน์ N
+            const radiusStreetCod = targetRow[13] ? targetRow[13].toString().trim() : ''; // รหัสถนนรัศมี
+
+            // ค้นหารากฐานราคากรมธนารักษ์ของหน่วยเทียบตาราง 3 และหน่วยเทียบรัศมี จากฐานข้อมูล currentRows
+            let table3TreasuryPrice = NaN;
+            if (table3StreetCod) {
+                const foundRowT3 = currentRows.find(r => r[4] && r[4].toString().trim() === table3StreetCod);
+                if (foundRowT3) table3TreasuryPrice = parseFloat(foundRowT3[5]);
+            }
+
+            let radiusTreasuryPrice = NaN;
+            if (radiusStreetCod) {
+                const foundRowRad = currentRows.find(r => r[4] && r[4].toString().trim() === radiusStreetCod);
+                if (foundRowRad) radiusTreasuryPrice = parseFloat(foundRowRad[5]);
+            }
 
             // 1. เคลียร์ Popup เก่าออกทั้งหมด
-            if (activePopupTargetMap1) {
-                gisMap1.removeLayer(activePopupTargetMap1);
-                activePopupTargetMap1 = null;
-            }
-            if (activePopupCompareMap1) {
-                gisMap1.removeLayer(activePopupCompareMap1);
-                activePopupCompareMap1 = null;
-            }
+            if (activePopupTargetMap1) { gisMap1.removeLayer(activePopupTargetMap1); activePopupTargetMap1 = null; }
+            if (activePopupTable3Map1) { gisMap1.removeLayer(activePopupTable3Map1); activePopupTable3Map1 = null; }
+            if (activePopupRadiusMap1) { gisMap1.removeLayer(activePopupRadiusMap1); activePopupRadiusMap1 = null; }
 
             gisMap1.closePopup();
             currentSelectedRowMap1 = targetRow;
 
-            let targetLayerFoundMap1 = null;
-            let compareLayerFoundMap1 = null;
+            let targetLayerFound = null;
+            let table3LayerFound = null;
+            let radiusLayerFound = null;
+            const layersToFit = [];
 
-            // 2. ซ่อนแปลงอื่นๆ ให้เห็นเฉพาะ 2 แปลงนี้
+            // 2. ค้นหา Layer แปลงบนแผนที่
             if (geojsonLayer1) {
                 geojsonLayer1.eachLayer(layer => {
                     const cod = (layer.feature.properties?.STREET_COD || layer.feature.properties?.ST_RN || layer.feature.properties?.Street_Cod || '').toString().trim();
                     if (cod === targetStreetCod) {
-                        targetLayerFoundMap1 = layer;
-                    } else if (cod === compareStreetCod) {
-                        compareLayerFoundMap1 = layer;
+                        targetLayerFound = layer;
+                    } else if (cod === table3StreetCod) {
+                        table3LayerFound = layer;
+                    } else if (cod === radiusStreetCod) {
+                        radiusLayerFound = layer;
                     } else {
                         // ซ่อนแปลงอื่นๆ
                         layer.setStyle({ opacity: 0, fillOpacity: 0 });
@@ -696,33 +720,35 @@
                 });
             }
 
-            // 3. เปิด Popup ตัวที่ 1 (ตัวถูกเปรียบเทียบ - สีแดง)
-            if (targetLayerFoundMap1) {
-                targetLayerFoundMap1.setStyle({ color: '#f43f5e', weight: 6, opacity: 1, fillColor: '#f43f5e', fillOpacity: 0.85 });
-                targetLayerFoundMap1.bringToFront();
+            // 3. เปิด Popup หน้าต่างที่ 1: แปลงหลัก (สีแดง) - เยื้องขวาบน
+            if (targetLayerFound) {
+                targetLayerFound.setStyle({ color: '#f43f5e', weight: 6, opacity: 1, fillColor: '#f43f5e', fillOpacity: 0.85 });
+                targetLayerFound.bringToFront();
+                layersToFit.push(targetLayerFound);
 
-                const centerLatLng = targetLayerFoundMap1.getBounds().getCenter();
+                const centerLatLng = targetLayerFound.getBounds().getCenter();
                 const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${centerLatLng.lat},${centerLatLng.lng}`;
                 
-                const targetFactorScore = parseFloat(targetRow[8]); // คะแนนปัจจัย
-                const treasuryPrice = parseFloat(targetRow[5]);     // ราคากรมธนารักษ์
-                const radiusPriceVal = parseFloat(targetRow[15]);   // ราคาหน่วยที่เทียบจากรัศมี
-                const modelPriceVal = parseFloat(targetRow[18]);    // ราคาจากแบบจำลอง
-                const isMarketAvailable = hasMarketData(targetRow);  // เช็คข้อความแจ้งว่าเป็นข้อมูลราคาตลาดหรือไม่
+                const targetFactorScore = parseFloat(targetRow[8]); 
+                const treasuryPrice = parseFloat(targetRow[5]);       
+                const table3PriceVal = parseFloat(targetRow[16]);     
+                const radiusPriceVal = parseFloat(targetRow[19]);     
+                const modelPriceVal = parseFloat(targetRow[22]);      
+                const isMarketAvailable = hasMarketData(targetRow);    
 
                 const popupRedContent = `
-                    <div style="font-family: 'Prompt', sans-serif; font-size: 12px; line-height: 1.5; min-width: 220px;">
+                    <div style="font-family: 'Prompt', sans-serif; font-size: 12px; line-height: 1.5; min-width: 230px;">
                         <div style="background: #f43f5e; color: white; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; display: inline-block; margin-bottom: 6px;">
-                            🔴 ตัวถูกเปรียบเทียบ (แปลงหลัก)
+                            🔴 แปลงหลัก (ตัวถูกเทียบ)
                         </div>
                         <div style="font-size: 13px; font-weight: bold; color: #f87171; margin-bottom: 2px;">${targetRow[3] || 'N/A'}</div>
-                        <div style="color: #94a3b8; font-size: 11px; margin-bottom: 4px;"><i class="fa-solid fa-road"></i> รหัสถนน: ${targetStreetCod}</div>
                         <div><b>คะแนนปัจจัย:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #f87171; font-weight: bold;">${!isNaN(targetFactorScore) ? targetFactorScore.toLocaleString('th-TH') : '-'}</span></div>
                         
                         ${isMarketAvailable ? '<div style="color: #f59e0b; font-weight: bold; font-size: 11px; margin: 4px 0;"><i class="fa-solid fa-circle-check"></i> ข้อมูลราคาตลาด</div>' : ''}
                         
-                        <div><b>ราคากรมธนารักษ์:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #38bdf8; font-weight: bold;">${!isNaN(treasuryPrice) ? treasuryPrice.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
-                        <div><b>ราคาหน่วยที่เทียบจากรัศมี:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #38bdf8; font-weight: bold;">${!isNaN(radiusPriceVal) ? radiusPriceVal.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
+                        <div style="margin-top: 4px;"><b>ราคากรมธนารักษ์:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #38bdf8; font-weight: bold;">${!isNaN(treasuryPrice) ? treasuryPrice.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
+                        <div><b>ราคาประเมินแบบเทียบตาราง 3:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #3b82f6; font-weight: bold;">${!isNaN(table3PriceVal) ? table3PriceVal.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
+                        <div><b>ราคาหน่วยที่เทียบจากรัศมี:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #10b981; font-weight: bold;">${!isNaN(radiusPriceVal) ? radiusPriceVal.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
                         <div><b>ราคาจากแบบจำลอง:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #a855f7; font-weight: bold;">${!isNaN(modelPriceVal) ? modelPriceVal.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
                         
                         <hr style="border-color: #334155; margin: 8px 0 6px 0;">
@@ -732,51 +758,34 @@
                     </div>
                 `;
 
-                activePopupTargetMap1 = L.popup({ autoClose: false, closeOnClick: false, className: 'popup-target', offset: [180, -60] })
+                activePopupTargetMap1 = L.popup({ autoClose: false, closeOnClick: false, className: 'popup-target', offset: [200, -120] })
                     .setLatLng(centerLatLng)
                     .setContent(popupRedContent)
                     .openOn(gisMap1);
             }
 
-            // 4. เปิด Popup ตัวที่ 2 (ตัวเปรียบเทียบ - สีเขียว)
-            if (compareLayerFoundMap1) {
-                compareLayerFoundMap1.setStyle({ color: '#10b981', weight: 6, opacity: 1, fillColor: '#34d399', fillOpacity: 0.85 });
-                compareLayerFoundMap1.bringToFront();
+            // 4. เปิด Popup หน้าต่างที่ 2: ตัวเทียบตาราง 3 (สีน้ำเงิน) - แสดงราคากรมธนารักษ์
+            if (table3LayerFound) {
+                table3LayerFound.setStyle({ color: '#3b82f6', weight: 6, opacity: 1, fillColor: '#60a5fa', fillOpacity: 0.85 });
+                table3LayerFound.bringToFront();
+                layersToFit.push(table3LayerFound);
 
-                const compareRow = currentRows.find(r => {
-                    const nameN = r[3] ? r[3].toString().trim() : '';
-                    const codeO = r[4] ? r[4].toString().trim() : '';
-                    const targetNameN = targetRow[11] ? targetRow[11].toString().trim() : '';
-                    const targetCodeO = targetRow[14] ? targetRow[14].toString().trim() : '';
-                    return (nameN !== '' && nameN === targetNameN) || (codeO !== '' && codeO === targetCodeO);
-                });
+                const table3Name = targetRow[12] || 'หน่วยเทียบตาราง 3'; 
+                const table3Score = parseFloat(targetRow[14]);       
+                const displayT3Price = !isNaN(table3TreasuryPrice) ? table3TreasuryPrice : parseFloat(targetRow[16]);
 
-                const compareUnitName = compareRow ? compareRow[3] : (targetRow[11] || 'N/A');
-                const compareTreasuryPrice = compareRow && !isNaN(parseFloat(compareRow[5])) 
-                    ? parseFloat(compareRow[5]) 
-                    : (targetRow[10] ? parseFloat(targetRow[10]) : NaN);
-                
-                const compareModelPrice = compareRow && !isNaN(parseFloat(compareRow[18]))
-                    ? parseFloat(compareRow[18])
-                    : NaN;
-
-                const radiusScoreVal = parseFloat(targetRow[17]); // คะแนนของหน่วยที่เทียบจากรัศมี
-                const table3ScoreVal = parseFloat(targetRow[12]); // คะแนนของหน่วย (เทียบจากตาราง 3)
-                const compareScoreVal = !isNaN(radiusScoreVal) ? radiusScoreVal : (!isNaN(table3ScoreVal) ? table3ScoreVal : (compareRow ? parseFloat(compareRow[8]) : NaN));
-
-                const centerLatLng = compareLayerFoundMap1.getBounds().getCenter();
+                const centerLatLng = table3LayerFound.getBounds().getCenter();
                 const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${centerLatLng.lat},${centerLatLng.lng}`;
 
-                const popupGreenContent = `
+                const popupBlueContent = `
                     <div style="font-family: 'Prompt', sans-serif; font-size: 12px; line-height: 1.5; min-width: 210px;">
-                        <div style="background: #10b981; color: white; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; display: inline-block; margin-bottom: 6px;">
-                            🟢 ตัวเปรียบเทียบ
+                        <div style="background: #3b82f6; color: white; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; display: inline-block; margin-bottom: 6px;">
+                            🔵 ตัวเทียบตาราง 3 
                         </div>
-                        <div style="font-size: 13px; font-weight: bold; color: #34d399; margin-bottom: 2px;">${compareUnitName}</div>
-                        <div style="color: #94a3b8; font-size: 11px; margin-bottom: 4px;"><i class="fa-solid fa-road"></i> รหัสถนนตัวเทียบ: ${compareStreetCod}</div>
-                        <div><b>คะแนนปัจจัย:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #34d399; font-weight: bold;">${!isNaN(compareScoreVal) ? compareScoreVal.toLocaleString('th-TH') : '-'}</span></div>
-                        <div><b>ราคากรมธนารักษ์:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #34d399; font-weight: bold;">${!isNaN(compareTreasuryPrice) ? compareTreasuryPrice.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
-                        <div><b>ราคาจากแบบจำลอง:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #a855f7; font-weight: bold;">${!isNaN(compareModelPrice) ? compareModelPrice.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
+                        <div style="font-size: 13px; font-weight: bold; color: #60a5fa; margin-bottom: 2px;">${table3Name}</div>
+                        <div style="color: #94a3b8; font-size: 11px; margin-bottom: 4px;"><i class="fa-solid fa-road"></i> รหัสถนน: ${table3StreetCod}</div>
+                        <div><b>คะแนนปัจจัยหน่วย :</b> <span style="font-family: 'JetBrains Mono', monospace; color: #60a5fa; font-weight: bold;">${!isNaN(table3Score) ? table3Score.toLocaleString('th-TH') : '-'}</span></div>
+                        <div style="margin-top: 4px;"><b>ราคากรมธนารักษ์:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #3b82f6; font-weight: bold;">${!isNaN(displayT3Price) ? displayT3Price.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
                         <hr style="border-color: #334155; margin: 8px 0 6px 0;">
                         <a href="${gmapsUrl}" target="_blank" style="display: block; width: 100%; text-align: center; background: linear-gradient(to right, #0284c7, #2563eb); color: white; padding: 6px 10px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 11px;">
                             <i class="fa-solid fa-map-location-dot"></i> ไปยัง Google Maps
@@ -784,18 +793,51 @@
                     </div>
                 `;
 
-                activePopupCompareMap1 = L.popup({ autoClose: false, closeOnClick: false, className: 'popup-compare', offset: [-180, 60] })
+                activePopupTable3Map1 = L.popup({ autoClose: false, closeOnClick: false, className: 'popup-table3', offset: [-200, -120] })
+                    .setLatLng(centerLatLng)
+                    .setContent(popupBlueContent)
+                    .openOn(gisMap1);
+            }
+
+            // 5. เปิด Popup หน้าต่างที่ 3: ตัวเทียบจากรัศมี (สีเขียว) - แสดงราคากรมธนารักษ์
+            if (radiusLayerFound) {
+                radiusLayerFound.setStyle({ color: '#10b981', weight: 6, opacity: 1, fillColor: '#34d399', fillOpacity: 0.85 });
+                radiusLayerFound.bringToFront();
+                layersToFit.push(radiusLayerFound);
+
+                const radiusName = targetRow[17] || 'หน่วยเทียบรัศมี';
+                const radiusScoreVal = parseFloat(targetRow[21]);
+                const displayRadPrice = !isNaN(radiusTreasuryPrice) ? radiusTreasuryPrice : parseFloat(targetRow[19]);
+
+                const centerLatLng = radiusLayerFound.getBounds().getCenter();
+                const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${centerLatLng.lat},${centerLatLng.lng}`;
+
+                const popupGreenContent = `
+                    <div style="font-family: 'Prompt', sans-serif; font-size: 12px; line-height: 1.5; min-width: 210px;">
+                        <div style="background: #10b981; color: white; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; display: inline-block; margin-bottom: 6px;">
+                            🟢 ตัวเทียบจากรัศมี
+                        </div>
+                        <div style="font-size: 13px; font-weight: bold; color: #34d399; margin-bottom: 2px;">${radiusName}</div>
+                        <div style="color: #94a3b8; font-size: 11px; margin-bottom: 4px;"><i class="fa-solid fa-road"></i> รหัสถนน: ${radiusStreetCod}</div>
+                        <div><b>คะแนนของหน่วย:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #34d399; font-weight: bold;">${!isNaN(radiusScoreVal) ? radiusScoreVal.toLocaleString('th-TH') : '-'}</span></div>
+                        <div style="margin-top: 4px;"><b>ราคากรมธนารักษ์:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #10b981; font-weight: bold;">${!isNaN(displayRadPrice) ? displayRadPrice.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
+                        <hr style="border-color: #334155; margin: 8px 0 6px 0;">
+                        <a href="${gmapsUrl}" target="_blank" style="display: block; width: 100%; text-align: center; background: linear-gradient(to right, #0284c7, #2563eb); color: white; padding: 6px 10px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 11px;">
+                            <i class="fa-solid fa-map-location-dot"></i> ไปยัง Google Maps
+                        </a>
+                    </div>
+                `;
+
+                activePopupRadiusMap1 = L.popup({ autoClose: false, closeOnClick: false, className: 'popup-radius', offset: [180, 120] })
                     .setLatLng(centerLatLng)
                     .setContent(popupGreenContent)
                     .openOn(gisMap1);
             }
 
-            // Zoom & Pan แผนที่ให้ครอบคลุมทั้ง 2 แปลงพอดี
-            if (targetLayerFoundMap1 && compareLayerFoundMap1) {
-                const featureGroup = L.featureGroup([targetLayerFoundMap1, compareLayerFoundMap1]);
-                gisMap1.fitBounds(featureGroup.getBounds(), { padding: [60, 60] });
-            } else if (targetLayerFoundMap1) {
-                gisMap1.fitBounds(targetLayerFoundMap1.getBounds(), { padding: [60, 60] });
+            // Zoom & Pan แผนให้ครอบคลุมทุกแปลงที่มีการแสดงผล
+            if (layersToFit.length > 0) {
+                const featureGroup = L.featureGroup(layersToFit);
+                gisMap1.fitBounds(featureGroup.getBounds(), { padding: [100, 100] });
             }
         }
 
@@ -885,7 +927,8 @@
         function resetSelectedUnit() {
             selectedUnitRow = null;
             if (activePopupTargetMap1) { gisMap1.removeLayer(activePopupTargetMap1); activePopupTargetMap1 = null; }
-            if (activePopupCompareMap1) { gisMap1.removeLayer(activePopupCompareMap1); activePopupCompareMap1 = null; }
+            if (activePopupTable3Map1) { gisMap1.removeLayer(activePopupTable3Map1); activePopupTable3Map1 = null; }
+            if (activePopupRadiusMap1) { gisMap1.removeLayer(activePopupRadiusMap1); activePopupRadiusMap1 = null; }
             
             if (geojsonLayer1 && rawGeoJsonData) {
                 renderSingleMap(rawGeoJsonData);
@@ -904,8 +947,8 @@
 
             filteredRows = currentRows.filter(row => {
                 const treasuryVal = parseFloat(row[5]);
-                const radiusVal = parseFloat(row[15]);
-                const modelVal = parseFloat(row[18]);
+                const radiusVal = parseFloat(row[19]);
+                const modelVal = parseFloat(row[22]);
                 const marketAvailable = hasMarketData(row);
 
                 let matchesGroup = true;
@@ -949,8 +992,8 @@
             const tableBody = document.getElementById('tableBody');
 
             headerGroupRow.innerHTML = `
-                <th colspan="10" class="bg-slate-950 border-b border-slate-800 py-1 text-center text-slate-500 font-normal text-[10px]">ข้อมูลมาตรฐานและข้อมูลราคาตลาด (ตรวจสอบข้อเท็จจริงในตาราง)</th>
-                <th colspan="3" class="bg-emerald-950/80 border-b border-emerald-500/40 text-emerald-300 py-1 text-center font-semibold text-[11px] uppercase tracking-wider">
+                <th colspan="9" class="bg-slate-950 border-b border-slate-800 py-1 text-center text-slate-500 font-normal text-[10px]">ข้อมูลมาตรฐานและข้อมูลราคาตลาด (ตรวจสอบข้อเท็จจริงในตาราง)</th>
+                <th colspan="8" class="bg-emerald-950/80 border-b border-emerald-500/40 text-emerald-300 py-1 text-center font-semibold text-[11px] uppercase tracking-wider">
                     <i class="fa-solid fa-table mr-1"></i> เทียบจากตาราง 3
                 </th>
                 <th colspan="5" class="bg-sky-950/80 border-b border-sky-500/40 text-sky-300 py-1 text-center font-semibold text-[11px] uppercase tracking-wider">
@@ -962,17 +1005,17 @@
             `;
 
             headerRow.innerHTML = headers.map((h, colIndex) => {
-                if (colIndex === 14) return '';
+                if (hiddenHeaderIndices.includes(colIndex)) return '';
 
                 let bgStyle = "bg-slate-950 text-slate-300";
                 
-                if (colIndex >= 10 && colIndex <= 12) {
+                if (colIndex >= 10 && colIndex <= 16) {
                     bgStyle = "bg-emerald-950/90 text-emerald-300 border-x border-emerald-800/40";
                 }
-                else if (colIndex >= 13 && colIndex <= 18) {
+                else if (colIndex >= 17 && colIndex <= 21) {
                     bgStyle = "bg-sky-950/90 text-sky-300 border-x border-sky-800/40";
                 }
-                else if (colIndex >= 19) {
+                else if (colIndex >= 22) {
                     bgStyle = "bg-amber-950/90 text-amber-300 border-x border-amber-800/40";
                 }
 
@@ -987,11 +1030,9 @@
             }).join('');
 
             if (rows.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="${headers.length - 1}" class="text-center py-10 text-slate-500">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td></tr>`;
+                tableBody.innerHTML = `<tr><td colspan="${headers.length - hiddenHeaderIndices.length}" class="text-center py-10 text-slate-500">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td></tr>`;
             } else {
                 tableBody.innerHTML = rows.map((row, idx) => {
-                    const treasuryVal = parseFloat(row[5]);
-                    const modelVal = parseFloat(row[18]); 
                     const isMarketAvailable = hasMarketData(row);
                     const isSelected = selectedUnitRow === row;
                     
@@ -1002,11 +1043,11 @@
                     return `
                         <tr onclick="selectUnitRow(${idx})" class="${activeRowClass}">
                             ${headers.map((_, colIdx) => {
-                                if (colIdx === 14) return '';
+                                if (hiddenHeaderIndices.includes(colIdx)) return '';
 
-                                if (colIdx === 19 || colIdx === 20) {
+                                if (colIdx === 23 || colIdx === 24) {
                                     const tVal = parseFloat(row[5]); // ราคากรมธนารักษ์
-                                    const compVal = colIdx === 19 ? parseFloat(row[15]) : parseFloat(row[18]); // Index 15 = ราคาเทียบรัศมี, Index 18 = ราคา Model
+                                    const compVal = colIdx === 23 ? parseFloat(row[19]) : parseFloat(row[22]); 
                                     let bBadge = '<span class="text-slate-600 font-mono">-</span>';
                                     if (!isNaN(tVal) && !isNaN(compVal) && tVal > 0) {
                                         const dPct = ((compVal - tVal) / tVal) * 100;
@@ -1046,16 +1087,17 @@
                                 if (colIdx === 6 || colIdx === 7) cellStyle += 'text-emerald-400 ';
                                 if (colIdx === 9) cellStyle += 'text-amber-400 font-bold ';
                                 
-                                if (colIdx >= 10 && colIdx <= 12) {
+                                if (colIdx >= 10 && colIdx <= 16) {
                                     cellStyle += 'bg-emerald-950/20 text-emerald-200 border-x border-emerald-900/20 ';
                                 }
-                                if (colIdx >= 13 && colIdx <= 18) {
+                                if (colIdx >= 17 && colIdx <= 21) {
                                     cellStyle += 'bg-sky-950/20 text-sky-200 border-x border-sky-900/20 ';
                                 }
-                                if (colIdx >= 19) {
+                                if (colIdx >= 22) {
                                     cellStyle += 'bg-amber-950/20 text-amber-200 border-x border-amber-900/20 ';
                                 }
-                                if (colIdx === 18) cellStyle += 'text-purple-300 font-bold ';
+                                if (colIdx === 16) cellStyle += 'text-emerald-300 font-bold ';
+                                if (colIdx === 22) cellStyle += 'text-purple-300 font-bold ';
 
                                 return `<td class="px-4 py-3 border-b border-slate-800/60 ${isSelected ? 'text-cyan-100' : ''} ${cellStyle}">${displayVal}</td>`;
                             }).join('')}
@@ -1104,7 +1146,7 @@
 
             currentRows.forEach(row => {
                 const treasury = parseFloat(row[5]);
-                const model = parseFloat(row[18]); 
+                const model = parseFloat(row[22]); 
                 const marketAvailable = hasMarketData(row);
 
                 if (marketAvailable) countMarket++;
@@ -1199,7 +1241,7 @@
                     btnReset.classList.add('hidden');
                     badgeText.textContent = "Top 10 แปลงสำรวจ";
                     badgeText.className = "text-[11px] font-medium text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1 rounded-lg w-fit";
-                    subtitleText.textContent = "แสดงผลราคาต่อหน่วยเปรียบเทียบ 3 ชุดราคาหลัก";
+                    subtitleText.textContent = "แสดงผลราคาต่อหน่วยเปรียบเทียบ 4 ชุดราคาหลัก";
                 }
 
                 const marketCountInFiltered = filteredRows.filter(hasMarketData).length;
@@ -1218,9 +1260,10 @@
                 return {
                     labels: [label],
                     datasets: [
-                        { label: 'ราคากรมธนารักษ์', data: [parseFloat(selectedUnitRow[5]) || 0], backgroundColor: '#3b82f6', borderRadius: 6 },
-                        { label: 'ราคาเทียบจากรัศมี', data: [parseFloat(selectedUnitRow[15]) || 0], backgroundColor: '#38bdf8', borderRadius: 6 },
-                        { label: 'ราคาจากแบบจำลอง', data: [parseFloat(selectedUnitRow[18]) || 0], backgroundColor: '#a855f7', borderRadius: 6 }
+                        { label: '1) ราคากรมธนารักษ์', data: [parseFloat(selectedUnitRow[5]) || 0], backgroundColor: '#3b82f6', borderRadius: 6 },
+                        { label: '2) ราคาประเมินแบบเทียบตาราง 3', data: [parseFloat(selectedUnitRow[16]) || 0], backgroundColor: '#10b981', borderRadius: 6 },
+                        { label: '3) ราคาหน่วยที่เทียบจากรัศมี', data: [parseFloat(selectedUnitRow[19]) || 0], backgroundColor: '#38bdf8', borderRadius: 6 },
+                        { label: '4) ราคาจากแบบจำลอง', data: [parseFloat(selectedUnitRow[22]) || 0], backgroundColor: '#a855f7', borderRadius: 6 }
                     ]
                 };
             }
@@ -1229,15 +1272,17 @@
             const labels = sampleRows.map(r => r[3] ? (r[3].length > 14 ? r[3].substring(0, 14) + '...' : r[3]) : 'N/A');
             
             const treasuryPrices = sampleRows.map(r => parseFloat(r[5]) || 0);
-            const radiusPrices = sampleRows.map(r => parseFloat(r[15]) || 0);
-            const modelPrices = sampleRows.map(r => parseFloat(r[18]) || 0);
+            const table3Prices = sampleRows.map(r => parseFloat(r[16]) || 0);
+            const radiusPrices = sampleRows.map(r => parseFloat(r[19]) || 0);
+            const modelPrices = sampleRows.map(r => parseFloat(r[22]) || 0);
 
             return {
                 labels: labels,
                 datasets: [
-                    { label: 'ราคากรมธนารักษ์', data: treasuryPrices, backgroundColor: '#3b82f6', borderRadius: 4 },
-                    { label: 'ราคาเทียบจากรัศมี', data: radiusPrices, backgroundColor: '#38bdf8', borderRadius: 4 },
-                    { label: 'ราคาจากแบบจำลอง', data: modelPrices, backgroundColor: '#a855f7', borderRadius: 4 }
+                    { label: '1) ราคากรมธนารักษ์', data: treasuryPrices, backgroundColor: '#3b82f6', borderRadius: 4 },
+                    { label: '2) ราคาประเมินแบบเทียบตาราง 3', data: table3Prices, backgroundColor: '#10b981', borderRadius: 4 },
+                    { label: '3) ราคาหน่วยที่เทียบจากรัศมี', data: radiusPrices, backgroundColor: '#38bdf8', borderRadius: 4 },
+                    { label: '4) ราคาจากแบบจำลอง', data: modelPrices, backgroundColor: '#a855f7', borderRadius: 4 }
                 ]
             };
         }
@@ -1249,7 +1294,7 @@
             filteredRows.forEach(row => {
                 if (hasMarketData(row)) {
                     const marketVal = parseFloat(row[9]); 
-                    const modelVal = parseFloat(row[18]);  
+                    const modelVal = parseFloat(row[22]);  
 
                     if (!isNaN(marketVal) && !isNaN(modelVal)) {
                         scatterPoints.push({ x: marketVal, y: modelVal });
