@@ -62,6 +62,22 @@
         }
         .leaflet-container { background: #060911 !important; font-family: 'Prompt', sans-serif !important; }
         
+        /* Custom Pointer Styles for Draggable Popups */
+        .leaflet-popup {
+            pointer-events: auto !important;
+            z-index: 1000 !important;
+        }
+        .leaflet-popup-content-wrapper {
+            pointer-events: auto !important;
+            cursor: grab !important;
+        }
+        .leaflet-popup-content-wrapper:active {
+            cursor: grabbing !important;
+        }
+        .leaflet-popup-content {
+            cursor: default !important;
+        }
+
         /* Base Popup Styling */
         .leaflet-popup-content-wrapper, .leaflet-popup-tip {
             background-color: #0f172a !important;
@@ -72,13 +88,13 @@
         
         /* Color-Specific Popup Borders */
         .popup-target .leaflet-popup-content-wrapper {
-            border: 2px solid #f43f5e !important; /* กรอบสีแดงสำหรับตัวถูกเทียบ */
+            border: 2px solid #f43f5e !important;
         }
         .popup-table3 .leaflet-popup-content-wrapper {
-            border: 2px solid #3b82f6 !important; /* กรอบสีน้ำเงินสำหรับตัวเทียบตาราง 3 */
+            border: 2px solid #3b82f6 !important;
         }
         .popup-radius .leaflet-popup-content-wrapper {
-            border: 2px solid #10b981 !important; /* กรอบสีเขียวสำหรับตัวเทียบรัศมี */
+            border: 2px solid #10b981 !important;
         }
 
         /* Fullscreen Mode Styling (100% Fullscreen True Mode) */
@@ -558,6 +574,22 @@
             }
         }
 
+        // ฟังก์ชันแปลง Popup ให้สามารถลากขยับได้อย่างอิสระด้วย L.Draggable
+        function makePopupDraggable(popup, map) {
+            setTimeout(() => {
+                const container = popup.getElement();
+                if (!container) return;
+                const wrapper = container.querySelector('.leaflet-popup-content-wrapper');
+                if (!wrapper) return;
+
+                const draggable = new L.Draggable(container, wrapper);
+                draggable.enable();
+
+                L.DomEvent.disableClickPropagation(container);
+                L.DomEvent.disableScrollPropagation(container);
+            }, 100);
+        }
+
         function convertGeoJsonIndian1975ToWGS84(geojson) {
             function transformCoords(coords) {
                 if (typeof coords[0] === 'number') {
@@ -636,8 +668,8 @@
         // ตั้งค่า Event เมื่อคลิกแปลงบนแผนที่
         function setupMapFeatureEvents(feature, layer) {
             const props = feature.properties || {};
-            const streetCod = props.STREET_COD || props.street_cod || props.Street_Cod || props.ST_RN || 'N/A';
-            const matchedRow = currentRows.find(r => r[4] && r[4].toString().trim() === streetCod.toString().trim());
+            const keyCodeVal = props.Key_Code || props.key_code || props.KEY_CODE || props.Key_code || 'N/A';
+            const matchedRow = currentRows.find(r => r[4] && r[4].toString().trim() === keyCodeVal.toString().trim());
 
             layer.on('click', () => {
                 if (matchedRow) {
@@ -659,36 +691,36 @@
                     const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${centerLatLng.lat},${centerLatLng.lng}`;
                     
                     const simpleContent = `<div style="font-family: 'Prompt', sans-serif; font-size: 12px; line-height: 1.5; min-width: 180px;">
-                        <b style="color: #38bdf8;"><i class="fa-solid fa-road"></i> รหัสถนน: ${streetCod}</b>
+                        <b style="color: #38bdf8;"><i class="fa-solid fa-map-pin"></i> แปลงพื้นที่</b>
                         <div style="color: #94a3b8; font-style: italic; margin-top: 4px;">ไม่มีข้อมูลราคาจับคู่ในระบบ</div>
                         <hr style="border-color: #334155; margin: 6px 0;">
                         <a href="${gmapsUrl}" target="_blank" style="display: block; width: 100%; text-align: center; background: #0284c7; color: white; padding: 4px; border-radius: 4px; text-decoration: none; font-size: 11px;">Google Maps</a>
                     </div>`;
-                    L.popup().setLatLng(centerLatLng).setContent(simpleContent).openOn(gisMap1);
+                    const popupObj = L.popup({ interactive: true }).setLatLng(centerLatLng).setContent(simpleContent).openOn(gisMap1);
+                    makePopupDraggable(popupObj, gisMap1);
                 }
             });
         }
 
-        // ฟังก์ชันไฮไลท์และเปิด Popup 3 หน้าต่างบนแผนที่ (อัปเดตรหัสถนน: ตาราง 3 ใช้คอลัมน์ N / รัศมีใช้คอลัมน์ S)
+        // ฟังก์ชันไฮไลท์และเปิด Popup 3 หน้าต่าง (ใช้ L.Draggable และซ่อน Key_Code เรียบร้อย)
         function highlightSingleMap(targetRow) {
             if (!targetRow) return;
 
-            const targetStreetCod = targetRow[4] ? targetRow[4].toString().trim() : ''; 
-            const table3StreetCod = targetRow[13] ? targetRow[13].toString().trim() : ''; // รหัสถนนตาราง 3 จาก คอลัมน์ N (Index 13)
-            const radiusStreetCod = targetRow[18] ? targetRow[18].toString().trim() : ''; // รหัสถนนตัวเทียบรัศมี จาก คอลัมน์ S (Index 18)
+            const targetKeyCode = targetRow[4] ? targetRow[4].toString().trim() : ''; 
+            const table3KeyCode = targetRow[13] ? targetRow[13].toString().trim() : ''; 
+            const radiusKeyCode = targetRow[18] ? targetRow[18].toString().trim() : ''; 
 
-            // ค้นหาแถวเต็มของหน่วยเทียบตาราง 3 และหน่วยเทียบรัศมี จากฐานข้อมูล currentRows
             let foundRowT3 = null;
             let table3TreasuryPrice = NaN;
-            if (table3StreetCod) {
-                foundRowT3 = currentRows.find(r => r[4] && r[4].toString().trim() === table3StreetCod);
+            if (table3KeyCode) {
+                foundRowT3 = currentRows.find(r => r[4] && r[4].toString().trim() === table3KeyCode);
                 if (foundRowT3) table3TreasuryPrice = parseFloat(foundRowT3[5]);
             }
 
             let foundRowRad = null;
             let radiusTreasuryPrice = NaN;
-            if (radiusStreetCod) {
-                foundRowRad = currentRows.find(r => r[4] && r[4].toString().trim() === radiusStreetCod);
+            if (radiusKeyCode) {
+                foundRowRad = currentRows.find(r => r[4] && r[4].toString().trim() === radiusKeyCode);
                 if (foundRowRad) radiusTreasuryPrice = parseFloat(foundRowRad[5]);
             }
 
@@ -705,24 +737,24 @@
             let radiusLayerFound = null;
             const layersToFit = [];
 
-            // 2. ค้นหา Layer แปลงบนแผนที่
+            // 2. ค้นหา Layer แปลงบนแผนที่โดยใช้ Key_Code
             if (geojsonLayer1) {
                 geojsonLayer1.eachLayer(layer => {
-                    const cod = (layer.feature.properties?.STREET_COD || layer.feature.properties?.ST_RN || layer.feature.properties?.Street_Cod || '').toString().trim();
-                    if (cod === targetStreetCod) {
+                    const props = layer.feature.properties || {};
+                    const kCode = (props.Key_Code || props.key_code || props.KEY_CODE || props.Key_code || '').toString().trim();
+                    if (kCode === targetKeyCode) {
                         targetLayerFound = layer;
-                    } else if (cod === table3StreetCod) {
+                    } else if (kCode === table3KeyCode) {
                         table3LayerFound = layer;
-                    } else if (cod === radiusStreetCod) {
+                    } else if (kCode === radiusKeyCode) {
                         radiusLayerFound = layer;
                     } else {
-                        // ซ่อนแปลงอื่นๆ
                         layer.setStyle({ opacity: 0, fillOpacity: 0 });
                     }
                 });
             }
 
-            // 3. เปิด Popup หน้าต่างที่ 1: แปลงหลัก (สีแดง) - เยื้องขวาบน
+            // 3. เปิด Popup หน้าต่างที่ 1: แปลงหลัก (สีแดง)
             if (targetLayerFound) {
                 targetLayerFound.setStyle({ color: '#f43f5e', weight: 6, opacity: 1, fillColor: '#f43f5e', fillOpacity: 0.85 });
                 targetLayerFound.bringToFront();
@@ -760,10 +792,12 @@
                     </div>
                 `;
 
-                activePopupTargetMap1 = L.popup({ autoClose: false, closeOnClick: false, className: 'popup-target', offset: [200, -120] })
+                activePopupTargetMap1 = L.popup({ autoClose: false, closeOnClick: false, interactive: true, className: 'popup-target', offset: [200, -120] })
                     .setLatLng(centerLatLng)
                     .setContent(popupRedContent)
                     .openOn(gisMap1);
+
+                makePopupDraggable(activePopupTargetMap1, gisMap1);
             }
 
             // 4. เปิด Popup หน้าต่างที่ 2: ตัวเทียบตาราง 3 (สีน้ำเงิน)
@@ -776,7 +810,6 @@
                 const table3Score = parseFloat(targetRow[14]);       
                 const displayT3Price = !isNaN(table3TreasuryPrice) ? table3TreasuryPrice : parseFloat(targetRow[16]);
 
-                // ดึงราคาต่ำสุด-สูงสุด และราคาแบบจำลองของหน่วยเทียบตาราง 3
                 const t3MinPrice = foundRowT3 ? parseFloat(foundRowT3[6]) : NaN;
                 const t3MaxPrice = foundRowT3 ? parseFloat(foundRowT3[7]) : NaN;
                 const t3ModelPrice = foundRowT3 ? parseFloat(foundRowT3[22]) : NaN;
@@ -790,7 +823,6 @@
                             🔵 ตัวเทียบตาราง 3 
                         </div>
                         <div style="font-size: 13px; font-weight: bold; color: #60a5fa; margin-bottom: 2px;">${table3Name}</div>
-                        <div style="color: #94a3b8; font-size: 11px; margin-bottom: 4px;"><i class="fa-solid fa-road"></i> รหัสถนน: ${table3StreetCod}</div>
                         <div><b>คะแนนปัจจัยหน่วย :</b> <span style="font-family: 'JetBrains Mono', monospace; color: #60a5fa; font-weight: bold;">${!isNaN(table3Score) ? table3Score.toLocaleString('th-TH') : '-'}</span></div>
                         <div style="margin-top: 4px;"><b>ราคากรมธนารักษ์:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #3b82f6; font-weight: bold;">${!isNaN(displayT3Price) ? displayT3Price.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
                         <div><b>ราคาตลาด (ต่ำสุด):</b> <span style="font-family: 'JetBrains Mono', monospace; color: #34d399; font-weight: bold;">${!isNaN(t3MinPrice) ? t3MinPrice.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
@@ -803,10 +835,12 @@
                     </div>
                 `;
 
-                activePopupTable3Map1 = L.popup({ autoClose: false, closeOnClick: false, className: 'popup-table3', offset: [-200, -120] })
+                activePopupTable3Map1 = L.popup({ autoClose: false, closeOnClick: false, interactive: true, className: 'popup-table3', offset: [-200, -120] })
                     .setLatLng(centerLatLng)
                     .setContent(popupBlueContent)
                     .openOn(gisMap1);
+
+                makePopupDraggable(activePopupTable3Map1, gisMap1);
             }
 
             // 5. เปิด Popup หน้าต่างที่ 3: ตัวเทียบจากรัศมี (สีเขียว)
@@ -819,7 +853,6 @@
                 const radiusScoreVal = parseFloat(targetRow[21]);
                 const displayRadPrice = !isNaN(radiusTreasuryPrice) ? radiusTreasuryPrice : parseFloat(targetRow[19]);
 
-                // ดึงราคาต่ำสุด-สูงสุด และราคาแบบจำลองของหน่วยเทียบรัศมี
                 const radMinPrice = foundRowRad ? parseFloat(foundRowRad[6]) : NaN;
                 const radMaxPrice = foundRowRad ? parseFloat(foundRowRad[7]) : NaN;
                 const radModelPrice = foundRowRad ? parseFloat(foundRowRad[22]) : NaN;
@@ -833,7 +866,6 @@
                             🟢 ตัวเทียบจากรัศมี
                         </div>
                         <div style="font-size: 13px; font-weight: bold; color: #34d399; margin-bottom: 2px;">${radiusName}</div>
-                        <div style="color: #94a3b8; font-size: 11px; margin-bottom: 4px;"><i class="fa-solid fa-road"></i> รหัสถนน: ${radiusStreetCod}</div>
                         <div><b>คะแนนของหน่วย:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #34d399; font-weight: bold;">${!isNaN(radiusScoreVal) ? radiusScoreVal.toLocaleString('th-TH') : '-'}</span></div>
                         <div style="margin-top: 4px;"><b>ราคากรมธนารักษ์:</b> <span style="font-family: 'JetBrains Mono', monospace; color: #10b981; font-weight: bold;">${!isNaN(displayRadPrice) ? displayRadPrice.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
                         <div><b>ราคาตลาด (ต่ำสุด):</b> <span style="font-family: 'JetBrains Mono', monospace; color: #34d399; font-weight: bold;">${!isNaN(radMinPrice) ? radMinPrice.toLocaleString('th-TH') : '-'}</span> บาท/ตร.ว.</div>
@@ -846,13 +878,14 @@
                     </div>
                 `;
 
-                activePopupRadiusMap1 = L.popup({ autoClose: false, closeOnClick: false, className: 'popup-radius', offset: [180, 120] })
+                activePopupRadiusMap1 = L.popup({ autoClose: false, closeOnClick: false, interactive: true, className: 'popup-radius', offset: [180, 120] })
                     .setLatLng(centerLatLng)
                     .setContent(popupGreenContent)
                     .openOn(gisMap1);
+
+                makePopupDraggable(activePopupRadiusMap1, gisMap1);
             }
 
-            // Zoom & Pan แผนให้ครอบคลุมทุกแปลงที่มีการแสดงผล
             if (layersToFit.length > 0) {
                 const featureGroup = L.featureGroup(layersToFit);
                 gisMap1.fitBounds(featureGroup.getBounds(), { padding: [100, 100] });
@@ -1064,7 +1097,7 @@
                                 if (hiddenHeaderIndices.includes(colIdx)) return '';
 
                                 if (colIdx === 23 || colIdx === 24) {
-                                    const tVal = parseFloat(row[5]); // ราคากรมธนารักษ์
+                                    const tVal = parseFloat(row[5]); 
                                     const compVal = colIdx === 23 ? parseFloat(row[19]) : parseFloat(row[22]); 
                                     let bBadge = '<span class="text-slate-600 font-mono">-</span>';
                                     if (!isNaN(tVal) && !isNaN(compVal) && tVal > 0) {
